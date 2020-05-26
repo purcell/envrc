@@ -163,7 +163,7 @@ To avoid confusion, `envrc-mode' is explicitly disabled in the buffer."
        (special-mode))
      (when envrc-mode (envrc-mode -1))
      (goto-char (point-max))
-     (with-silent-modifications
+     (let ((inhibit-read-only t))
        ,@body)))
 
 (defun envrc--debug (msg &rest args)
