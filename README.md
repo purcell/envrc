@@ -1,4 +1,4 @@
-[![Melpa Status](http://melpa.org/packages/envrc-badge.svg)](http://melpa.org/#/envrc)
+[![Melpa Status](http://melpa.org/packages/envrc-badge.svg)](https://melpa.org/#/envrc)
 [![Melpa Stable Status](http://stable.melpa.org/packages/envrc-badge.svg)](http://stable.melpa.org/#/envrc)
 [![Build Status](https://github.com/purcell/envrc/workflows/CI/badge.svg)](https://github.com/purcell/envrc/actions)
 <a href="https://www.patreon.com/sanityinc"><img alt="Support me" src="https://img.shields.io/badge/Support%20Me-%F0%9F%92%97-ff69b4.svg"></a>
@@ -119,3 +119,15 @@ Regarding interaction with the mode, see `envrc-mode-map`, and the
 commands `envrc-reload`, `envrc-allow` and `envrc-deny`.
 
 [download]: https://github.com/purcell/envrc/tags
+
+
+<hr>
+
+
+[💝 Support this project and my other Open Source work via Patreon](https://www.patreon.com/sanityinc)
+
+[💼 LinkedIn profile](https://uk.linkedin.com/in/stevepurcell)
+
+[✍ sanityinc.com](http://www.sanityinc.com/)
+
+[🐦 @sanityinc](https://twitter.com/sanityinc)
