@@ -117,8 +117,9 @@ might look for the presence of particular executables.
 
 You should only enable the mode if `direnv` is installed and available
 in the default Emacs `exec-path`. (There is a local minor mode
-`envrc-mode`, but you should not try to enable this
-granularly, e.g. for certain modes or projects, because compilation and other buffers might not see 
+`envrc-mode`, but you should not try to enable this granularly,
+e.g. for certain modes or projects, because compilation and other
+buffers might not get set up with the right environment.)
 
 Regarding interaction with the mode, see `envrc-mode-map`, and the
 commands `envrc-reload`, `envrc-allow` and `envrc-deny`.
