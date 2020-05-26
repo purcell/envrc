@@ -48,7 +48,7 @@ trade-offs of this simple approach are:
 
 Now, it is also possible to set `process-environment` locally in a
 buffer. If this value could be correctly maintained in all buffers
-based their various respective `.envrc` files, then buffers across
+based on their various respective `.envrc` files, then buffers across
 multiple projects could simultaneously be "connected" to the
 environments of their corresponding project directories. I wrote
 `envrc.el` to explore this approach.
