@@ -21,7 +21,7 @@ works in a certain way that has particular trade-offs. I wanted to
 explore a different approach. *The existing `direnv` package has many
 happy users, and I make no claim that this one is better: it is just
 different. Additionally, the `envrc.el` package is at an earlier stage
-of development, and probably has bugs.*
+of development, and likely has bugs.*
 
 By default, Emacs has a single global set of environment variables
 used for all subprocesses, stored in the `process-environment`
@@ -106,8 +106,14 @@ Add the following to your `init.el` (after calling `package-initialize`):
 (envrc-global-mode)
 ```
 
+*It's probably wise to do this late in your startup sequence* so that
+this mode is enabled before other minor modes, e.g. `flycheck`, which
+might look for the presence of particular executables.
+
 You should only enable the mode if `direnv` is installed and available
-in the default Emacs `exec-path`.
+in the default Emacs `exec-path`. (There is a local minor mode
+`envrc-mode`, but you should not try to enable this
+granularly, e.g. for certain modes or projects, because compilation and other buffers might not see 
 
 Regarding interaction with the mode, see `envrc-mode-map`, and the
 commands `envrc-reload`, `envrc-allow` and `envrc-deny`.
