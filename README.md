@@ -10,7 +10,7 @@ environment variables on a per-buffer basis. This means that when you
 work across multiple projects which have `.envrc` files, all processes
 launched from the buffers "in" those projects will be executed with
 the environment variables specified in those files. This allows
-different versions of linters and other tools to be installed in each
+different versions of linters and other tools to be used in each
 project if desired.
 
 ## Design notes
