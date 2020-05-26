@@ -30,8 +30,8 @@
 
 ;;; Code:
 
-;; TODO: special handling for DIRENV_* vars? exclude them?
-;; TODO: exclude remote files?
+;; TODO: special handling for DIRENV_* vars? exclude them? use them to safely reload more aggressively?
+;; TODO: special handling for remote files
 ;; TODO: handle nil default-directory (rarely happens, but is possible)
 ;; TODO: limit size of *direnv* buffer
 ;; TODO: special handling of compilation-environment?
@@ -39,6 +39,8 @@
 ;; TODO: handle "allow" asynchronously?
 ;; TODO: describe env
 ;; TODO: click on mode lighter to get details
+;; TODO: handle when direnv is not installed?
+;; TODO: provide a way to disable in certain projects?
 
 (require 'seq)
 (require 'json)
