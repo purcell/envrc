@@ -67,14 +67,19 @@ for executing processes.)
 
 This approach also has some trade-offs:
 
-* Things like `*help*` buffers will have `envrc-mode` enabled based on
-  the directory of the buffer which caused them to be created
-  initially.
+* Buffers like `*Help*` will have `envrc-mode` enabled based on the
+  directory of the buffer which caused them to be created initially,
+  and then those buffers often live for a long time. If you launch
+  programs from such buffers while working on a different project, the
+  results might not be what you expect. I might exclude certain modes
+  to minimise confusion, but users will always have to be aware of the
+  fact that environments are buffer-specific.
 
-* There's a (very small) overhead every time a buffer is created.
+* There's a (very small) overhead every time a buffer is created, and
+  that happens quite a lot.
 
-* Updates are not automatic. `direnv.el` re-executes `direnv` when
-  switching between buffers, whereas `envrc-mode` caches the
+* `direnv` updates are not automatic. `direnv.el` re-executes `direnv`
+  when switching between buffers, whereas `envrc-mode` caches the
   environment until the user refreshes it explicitly with
   `envrc-reload`.
 
