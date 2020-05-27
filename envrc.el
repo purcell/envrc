@@ -96,7 +96,7 @@ You can set this to nil to disable the lighter."
 
 ;;;###autoload
 (define-globalized-minor-mode envrc-global-mode envrc-mode
-  (lambda () (unless (minibufferp)
+  (lambda () (unless (or (minibufferp) (file-remote-p default-directory))
           (envrc-mode 1))))
 
 (defface envrc-mode-line-on-face '((t :inherit success))
