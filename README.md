@@ -79,9 +79,9 @@ This approach also has some trade-offs:
   that happens quite a lot.
 
 * `direnv` updates are not automatic. `direnv.el` re-executes `direnv`
-  when switching between buffers, whereas `envrc-mode` caches the
-  environment until the user refreshes it explicitly with
-  `envrc-reload`.
+  when switching between buffers that visit files in different
+  directories, whereas `envrc-mode` caches the environment until the
+  user refreshes it explicitly with `envrc-reload`.
 
 I hope that these will be worthwhile, since my ultimate goal is to
 integrate with `lorri`, a daemon which re-builds Nix projects
