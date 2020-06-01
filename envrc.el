@@ -270,23 +270,29 @@ also appear in PAIRS."
                 (setq-local eshell-path-env path))))
         (envrc--debug "[%s] reset environment to default" buf)))))
 
+(defun envrc--mode-buffers ()
+  "Return a list of all live buffers in which `envrc-mode' is enabled."
+  (seq-filter (lambda (b) (and (buffer-live-p b)
+                          (with-current-buffer b
+                            envrc-mode)))
+              (buffer-list)))
+
 (defun envrc--apply-all (env-dir)
   "Update all direnv-managed buffers for ENV-DIR from `envrc--envs'."
   (envrc--debug "Updating all buffers in env %s" env-dir)
   (let ((env-dirs-deepest-paths-first (envrc--deepest-paths-first (hash-table-keys envrc--envs))))
     (envrc--debug "Env dirs deepest first: %S" env-dirs-deepest-paths-first)
-    (dolist (buf (seq-filter 'buffer-live-p (buffer-list)))
+    (dolist (buf (envrc--mode-buffers))
       (with-current-buffer buf
-        (when envrc-mode
-          ;; Quickly check this buffer is at least "inside" this env
-          (when (envrc--directory-path-deeper-p env-dir default-directory)
-            ;; Then check that there is no nested env which is "closer"
-            (let ((closest-env-dir (seq-find (lambda (dir)
-                                               (envrc--directory-path-deeper-p dir default-directory))
-                                             env-dirs-deepest-paths-first)))
-              (when (string= env-dir closest-env-dir)
-                (envrc--debug "[%s] updating from matching env dir %s" (buffer-name) env-dir)
-                (envrc--apply buf (gethash env-dir envrc--envs))))))))))
+        ;; Quickly check this buffer is at least "inside" this env
+        (when (envrc--directory-path-deeper-p env-dir default-directory)
+          ;; Then check that there is no nested env which is "closer"
+          (let ((closest-env-dir (seq-find (lambda (dir)
+                                             (envrc--directory-path-deeper-p dir default-directory))
+                                           env-dirs-deepest-paths-first)))
+            (when (string= env-dir closest-env-dir)
+              (envrc--debug "[%s] updating from matching env dir %s" (buffer-name) env-dir)
+              (envrc--apply buf (gethash env-dir envrc--envs)))))))))
 
 (defmacro envrc--with-required-current-env (varname &rest body)
   "With VARNAME set to the current env dir path, execute BODY.
@@ -332,6 +338,15 @@ ARGS is as for `call-process'."
             (puthash env-dir 'error envrc--envs)
             (envrc--apply-all env-dir))
         (display-buffer "*envrc-deny*")))))
+
+(defun envrc-update-all ()
+  "Refresh direnvs for all buffers.
+This can be useful if a .envrc has been deleted."
+  (interactive)
+  (clrhash envrc--envs)
+  (dolist (buf (envrc--mode-buffers))
+    (with-current-buffer buf
+      (envrc--register))))
 
 
 (provide 'envrc)
