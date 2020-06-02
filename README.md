@@ -111,9 +111,13 @@ Add the following to your `init.el` (after calling `package-initialize`):
 (envrc-global-mode)
 ```
 
-*It's probably wise to do this late in your startup sequence* so that
-this mode is enabled before other minor modes, e.g. `flycheck`, which
-might look for the presence of particular executables.
+It's probably wise to do this *late in your startup sequence*. Because
+minor modes are usually added at the beginning of hooks (e.g.,
+major-mode hooks and `find-file-hook`), evaluating `envrc-global-mode`
+at the end of your Emacs initialization code gives `envrc.el` greater
+chances to be executed *before* other minor modes. This is important
+to make other minor modes, e.g., `flycheck`, search for their
+executable files through `direnv` instead of globally.
 
 You should only enable the mode if `direnv` is installed and available
 in the default Emacs `exec-path`. (There is a local minor mode
