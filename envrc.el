@@ -339,8 +339,8 @@ ARGS is as for `call-process'."
             (envrc--apply-all env-dir))
         (display-buffer "*envrc-deny*")))))
 
-(defun envrc-update-all ()
-  "Refresh direnvs for all buffers.
+(defun envrc-reload-all ()
+  "Reload direnvs for all buffers.
 This can be useful if a .envrc has been deleted."
   (interactive)
   (clrhash envrc--envs)

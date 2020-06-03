@@ -126,7 +126,8 @@ e.g. for certain modes or projects, because compilation and other
 buffers might not get set up with the right environment.)
 
 Regarding interaction with the mode, see `envrc-mode-map`, and the
-commands `envrc-reload`, `envrc-allow` and `envrc-deny`.
+commands `envrc-reload`, `envrc-allow` and `envrc-deny`. (There's also
+`envrc-reload-all` as a "nuclear" reset, for now!)
 
 [download]: https://github.com/purcell/envrc/tags
 
