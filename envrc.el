@@ -284,15 +284,16 @@ also appear in PAIRS."
     (envrc--debug "Env dirs deepest first: %S" env-dirs-deepest-paths-first)
     (dolist (buf (envrc--mode-buffers))
       (with-current-buffer buf
-        ;; Quickly check this buffer is at least "inside" this env
-        (when (envrc--directory-path-deeper-p env-dir default-directory)
-          ;; Then check that there is no nested env which is "closer"
-          (let ((closest-env-dir (seq-find (lambda (dir)
-                                             (envrc--directory-path-deeper-p dir default-directory))
-                                           env-dirs-deepest-paths-first)))
-            (when (string= env-dir closest-env-dir)
-              (envrc--debug "[%s] updating from matching env dir %s" (buffer-name) env-dir)
-              (envrc--apply buf (gethash env-dir envrc--envs)))))))))
+        (let ((default-directory (expand-file-name default-directory))) ;; Guard against abbreviation
+          ;; Quickly check this buffer is at least "inside" this env
+          (when (envrc--directory-path-deeper-p env-dir default-directory)
+            ;; Then check that there is no nested env which is "closer"
+            (let ((closest-env-dir (seq-find (lambda (dir)
+                                               (envrc--directory-path-deeper-p dir default-directory))
+                                             env-dirs-deepest-paths-first)))
+              (when (string= env-dir closest-env-dir)
+                (envrc--debug "[%s] updating from matching env dir %s" (buffer-name) env-dir)
+                (envrc--apply buf (gethash env-dir envrc--envs))))))))))
 
 (defmacro envrc--with-required-current-env (varname &rest body)
   "With VARNAME set to the current env dir path, execute BODY.
