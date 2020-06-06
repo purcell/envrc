@@ -147,7 +147,9 @@ One of '(none on error).")
 This is based on a file scan.  In most cases we prefer to use the
 cached list of known dirs.
 
-Regardless of buffer file name, we always use `default-directory': the two should always match, unless the user called `cd'"
+Regardless of buffer file name, we always use
+`default-directory': the two should always match, unless the user
+called `cd'"
   (let ((env-dir (locate-dominating-file default-directory ".envrc")))
     (when env-dir
       ;; `locate-dominating-file' appears to sometimes return abbreviated paths, e.g. with ~
