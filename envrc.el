@@ -74,15 +74,25 @@ You can set this to nil to disable the lighter."
 
 (put 'envrc--lighter 'risky-local-variable t)
 
-(defcustom envrc-mode-map
+(defcustom envrc-prefix (kbd "C-c C-e")
+  "Envrc keymap prefix."
+  :type 'string)
+
+(defcustom envrc-command-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-c C-e a") 'envrc-allow)
-    (define-key map (kbd "C-c C-e d") 'envrc-deny)
-    (define-key map (kbd "C-c C-e r") 'envrc-reload)
-    (define-key map (kbd "C-c C-e C-e") 'envrc-reload)
+    (define-key map (kbd "a") 'envrc-allow)
+    (define-key map (kbd "d") 'envrc-deny)
+    (define-key map (kbd "r") 'envrc-reload)
+    (define-key map (kbd "C-e") 'envrc-reload)
     map)
   "Keymap for `envrc-mode'."
   :type 'keymap)
+(fset 'envrc-command-map envrc-command-map)
+
+(defvar envrc-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map envrc-prefix envrc-command-map)
+    map))
 
 ;;;###autoload
 (define-minor-mode envrc-mode
