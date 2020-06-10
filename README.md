@@ -128,6 +128,15 @@ Regarding interaction with the mode, see `envrc-mode-map`, and the
 commands `envrc-reload`, `envrc-allow` and `envrc-deny`. (There's also
 `envrc-reload-all` as a "nuclear" reset, for now!)
 
+In particular, you can enable keybindings for the above commands by
+binding your preferred prefix to `envrc-command-map` in
+`envrc-mode-map`, e.g.
+
+```el
+(with-eval-after-load 'envrc
+  (define-key envrc-mode-map (kbd "C-c e") 'envrc-command-map))
+```
+
 [download]: https://github.com/purcell/envrc/tags
 
 

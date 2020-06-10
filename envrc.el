@@ -35,6 +35,12 @@
 ;; interaction with this functionality, see `envrc-mode-map', and the
 ;; commands `envrc-reload', `envrc-allow' and `envrc-deny'.
 
+;; In particular, you can enable keybindings for the above commands by
+;; binding your preferred prefix to `envrc-command-map' in
+;; `envrc-mode-map', e.g.
+
+;;    (with-eval-after-load 'envrc
+;;      (define-key envrc-mode-map (kbd "C-c e") 'envrc-command-map))
 
 ;;; Code:
 
@@ -74,10 +80,6 @@ You can set this to nil to disable the lighter."
 
 (put 'envrc--lighter 'risky-local-variable t)
 
-(defcustom envrc-prefix (kbd "C-c C-e")
-  "Envrc keymap prefix."
-  :type 'string)
-
 (defcustom envrc-command-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "a") 'envrc-allow)
@@ -85,14 +87,16 @@ You can set this to nil to disable the lighter."
     (define-key map (kbd "r") 'envrc-reload)
     (define-key map (kbd "C-e") 'envrc-reload)
     map)
-  "Keymap for `envrc-mode'."
+  "Keymap for commands in `envrc-mode'.
+See `envrc-mode-map' for how to assign a prefix binding to these."
   :type 'keymap)
 (fset 'envrc-command-map envrc-command-map)
 
-(defvar envrc-mode-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map envrc-prefix envrc-command-map)
-    map))
+(defcustom envrc-mode-map (make-sparse-keymap)
+  "Keymap for `envrc-mode'.
+To access `envrc-command-map' from this map, give it a prefix keybinding,
+e.g. (define-key envrc-mode-map (kbd \"C-c C-e\") 'envrc-command-map)"
+  :type 'keymap)
 
 ;;;###autoload
 (define-minor-mode envrc-mode
