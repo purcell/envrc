@@ -85,7 +85,6 @@ You can set this to nil to disable the lighter."
     (define-key map (kbd "a") 'envrc-allow)
     (define-key map (kbd "d") 'envrc-deny)
     (define-key map (kbd "r") 'envrc-reload)
-    (define-key map (kbd "C-e") 'envrc-reload)
     map)
   "Keymap for commands in `envrc-mode'.
 See `envrc-mode-map' for how to assign a prefix binding to these."
