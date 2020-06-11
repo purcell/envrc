@@ -40,7 +40,7 @@
 ;; `envrc-mode-map', e.g.
 
 ;;    (with-eval-after-load 'envrc
-;;      (define-key envrc-mode-map (kbd "C-c $") 'envrc-command-map))
+;;      (define-key envrc-mode-map (kbd "C-c e") 'envrc-command-map))
 
 ;;; Code:
 
@@ -95,7 +95,7 @@ See `envrc-mode-map' for how to assign a prefix binding to these."
 (defcustom envrc-mode-map (make-sparse-keymap)
   "Keymap for `envrc-mode'.
 To access `envrc-command-map' from this map, give it a prefix keybinding,
-e.g. (define-key envrc-mode-map (kbd \"C-c $\") 'envrc-command-map)"
+e.g. (define-key envrc-mode-map (kbd \"C-c e\") 'envrc-command-map)"
   :type 'keymap)
 
 ;;;###autoload

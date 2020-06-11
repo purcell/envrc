@@ -134,7 +134,7 @@ binding your preferred prefix to `envrc-command-map` in
 
 ```el
 (with-eval-after-load 'envrc
-  (define-key envrc-mode-map (kbd "C-c $") 'envrc-command-map))
+  (define-key envrc-mode-map (kbd "C-c e") 'envrc-command-map))
 ```
 
 [download]: https://github.com/purcell/envrc/tags
