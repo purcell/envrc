@@ -189,12 +189,6 @@ MSG and ARGS are as for that function."
       (insert (apply 'format msg args))
       (newline))))
 
-(defun envrc--hash-table-to-alist (table)
-  "Convert TABLE to an alist."
-  (let (pairs)
-    (maphash (lambda (k v) (push (cons k v) pairs)) table)
-    pairs))
-
 (defun envrc--directory-path-deeper-p (a b)
   "Return non-nil if directory path B is deeper than directory path A."
   (string-prefix-p (file-name-as-directory a) (file-name-as-directory b)))
