@@ -104,8 +104,8 @@ e.g. (define-key envrc-mode-map (kbd \"C-c e\") 'envrc-command-map)"
   :lighter envrc--lighter
   :keymap envrc-mode-map
   (if envrc-mode
-      (envrc--register)
-    (envrc--apply (current-buffer) nil)))
+      (envrc--update)
+    (envrc--clear (current-buffer))))
 
 ;;;###autoload
 (define-globalized-minor-mode envrc-global-mode envrc-mode
@@ -123,7 +123,7 @@ e.g. (define-key envrc-mode-map (kbd \"C-c e\") 'envrc-command-map)"
 
 ;;; Global state
 
-(defvar envrc--envs (make-hash-table :test 'equal :size 10)
+(defvar envrc--cache (make-hash-table :test 'equal :size 10)
   "Known envrc directories and their direnv results, as produced by `envrc--export'.")
 
 ;;; Local state
@@ -159,15 +159,29 @@ called `cd'"
       (setq env-dir (expand-file-name env-dir)))
     env-dir))
 
-(defun envrc--register ()
+(defun envrc--cache-key (env-dir process-environment)
+  "Get a hash key for the result of invoking direnv in ENV-DIR with PROCESS-ENVIRONMENT."
+  (mapconcat 'identity (cons env-dir process-environment) "\0"))
+
+(defun envrc--update ()
   "Add the current buffer's env, if any.
 All `envrc'-managed buffers with this env will have their
 environments updated."
-  (let ((env-dir (envrc--find-env-dir)))
+  (let* ((env-dir (envrc--find-env-dir))
+         (initial-process-environment process-environment)
+         (cache-key (envrc--cache-key env-dir process-environment)))
+    ;; TODO: if no env-dir?
     (when env-dir
-      (pcase (gethash env-dir envrc--envs 'missing)
-        (`missing (envrc--update-env env-dir))
-        (values (envrc--apply (current-buffer) values))))))
+      (let ((result (pcase (gethash cache-key envrc--cache 'missing)
+                      (`missing (let ((calculated (envrc--export env-dir)))
+                                  (puthash cache-key calculated envrc--cache)
+                                  calculated))
+                      (cached cached))))
+        (envrc--apply (current-buffer) result)
+        ;; We assume direnv and envrc's use of it is idempotent, and
+        ;; add a cache entry for the resulting process-environment on
+        ;; that basis.
+        (puthash (envrc--cache-key env-dir process-environment) result envrc--cache)))))
 
 (defmacro envrc--at-end-of-special-buffer (name &rest body)
   "At the end of `special-mode' buffer NAME, execute BODY.
@@ -197,17 +211,12 @@ MSG and ARGS are as for that function."
   "Sort PATHS such that the deepest paths in a hierarchy appear first."
   (sort paths
         (lambda (a b) (or (envrc--directory-path-deeper-p b a)
-                     (string< a b)))))
-
-(defun envrc--update-env (env-dir)
-  "Enable direnv management for ENV-DIR in `envrc-mode' buffers."
-  (puthash env-dir (envrc--export env-dir) envrc--envs)
-  (envrc--apply-all env-dir))
+                          (string< a b)))))
 
 (defun envrc--export (env-dir)
   "Export the env vars for ENV-DIR using direnv.
-Return value is either 'error, or a (possibly-empty)
-alist of environment variable names and values."
+Return value is either 'error, 'none, or an alist of environment
+variable names and values."
   (unless (file-exists-p (expand-file-name ".envrc" env-dir))
     (error "%s is not a directory with a .envrc" env-dir))
   (message "Running direnv in %s..." env-dir)
@@ -216,12 +225,13 @@ alist of environment variable names and values."
     (unwind-protect
         (let ((default-directory env-dir))
           (with-temp-buffer
-            (let ((exit-code (envrc--call-process-in-default-env "direnv" nil (list t stderr-file) nil "export" "json")))
+            (let ((exit-code (envrc--call-process-with-default-exec-path "direnv" nil (list t stderr-file) nil "export" "json")))
               (envrc--debug "Direnv exited with %s and output: %S" exit-code (buffer-string))
               (if (zerop exit-code)
                   (progn
                     (message "Direnv succeeded in %s" env-dir)
-                    (unless (zerop (buffer-size))
+                    (if (zerop (buffer-size))
+                        (setq result 'none)
                       (goto-char (point-min))
                       (setq result (let ((json-key-type 'string)) (json-read-object)))))
                 (message "Direnv failed in %s" env-dir)
@@ -256,53 +266,47 @@ also appear in PAIRS."
                   pairs)
           process-env))
 
+(defun envrc--clear (buf)
+  "Remove any effects of `envrc-mode' from BUF."
+  (with-current-buffer buf
+    (kill-local-variable 'exec-path)
+    (kill-local-variable 'process-environment)
+    (kill-local-variable 'eshell-path-env)))
+
+
 (defun envrc--apply (buf result)
   "Update BUF with RESULT, which is a result of `envrc--export'."
   (with-current-buffer buf
-    (setq-local
-     envrc--status
-     (pcase result
-       (`error 'error)
-       (`() 'none)
-       (_ 'on)))
-    (kill-local-variable 'exec-path)
-    (kill-local-variable 'process-environment)
-    (kill-local-variable 'eshell-path-env)
-    (let ((pairs (when (listp result) result)))
-      (if pairs
-          (progn
-            (envrc--debug "[%s] applied merged environment" buf)
-            (setq-local process-environment (envrc--merged-environment process-environment pairs))
-            (let ((path (getenv "PATH"))) ;; Get PATH from the merged environment: direnv may not have changed it
-              (setq-local exec-path (parse-colon-path path))
-              (when (derived-mode-p 'eshell-mode)
-                (setq-local eshell-path-env path))))
-        (envrc--debug "[%s] reset environment to default" buf)))))
+    (setq-local envrc--status (if (listp result) 'on result))
+    (if (memq result '(none error))
+        (progn
+          (envrc--clear buf)
+          (envrc--debug "[%s] reset environment to default" buf))
+      (envrc--debug "[%s] applied merged environment" buf)
+      (setq-local process-environment (envrc--merged-environment process-environment result))
+      (let ((path (getenv "PATH"))) ;; Get PATH from the merged environment: direnv may not have changed it
+        (setq-local exec-path (parse-colon-path path))
+        (when (derived-mode-p 'eshell-mode)
+          (setq-local eshell-path-env path))))))
+
+(defun envrc--update-env (env-dir)
+  "Refresh the state of the direnv in ENV-DIR and apply in all relevant buffers."
+  (envrc--debug "Invalidating cache for env %s" env-dir)
+  (cl-loop for k being the hash-keys of envrc--cache
+           if (string-prefix-p (concat env-dir "\0") k)
+           do (remhash k envrc--cache))
+  (envrc--debug "Refreshing all buffers in env  %s" env-dir)
+  (dolist (buf (envrc--mode-buffers))
+    (with-current-buffer buf
+      (when (string= (envrc--find-env-dir) env-dir)
+        (envrc--update)))))
 
 (defun envrc--mode-buffers ()
   "Return a list of all live buffers in which `envrc-mode' is enabled."
   (seq-filter (lambda (b) (and (buffer-live-p b)
-                          (with-current-buffer b
-                            envrc-mode)))
+                               (with-current-buffer b
+                                 envrc-mode)))
               (buffer-list)))
-
-(defun envrc--apply-all (env-dir)
-  "Update all direnv-managed buffers for ENV-DIR from `envrc--envs'."
-  (envrc--debug "Updating all buffers in env %s" env-dir)
-  (let ((env-dirs-deepest-paths-first (envrc--deepest-paths-first (hash-table-keys envrc--envs))))
-    (envrc--debug "Env dirs deepest first: %S" env-dirs-deepest-paths-first)
-    (dolist (buf (envrc--mode-buffers))
-      (with-current-buffer buf
-        (let ((default-directory (expand-file-name default-directory))) ;; Guard against abbreviation
-          ;; Quickly check this buffer is at least "inside" this env
-          (when (envrc--directory-path-deeper-p env-dir default-directory)
-            ;; Then check that there is no nested env which is "closer"
-            (let ((closest-env-dir (seq-find (lambda (dir)
-                                               (envrc--directory-path-deeper-p dir default-directory))
-                                             env-dirs-deepest-paths-first)))
-              (when (string= env-dir closest-env-dir)
-                (envrc--debug "[%s] updating from matching env dir %s" (buffer-name) env-dir)
-                (envrc--apply buf (gethash env-dir envrc--envs))))))))))
 
 (defmacro envrc--with-required-current-env (varname &rest body)
   "With VARNAME set to the current env dir path, execute BODY.
@@ -314,11 +318,11 @@ If there is no current env dir, abort with a user error."
        (user-error "No enclosing .envrc"))
      ,@body))
 
-(defun envrc--call-process-in-default-env (&rest args)
-  "Like `call-process', but ensures the default `process-environment' is used.
-ARGS is as for `call-process'."
-  (let ((process-environment (default-value 'process-environment))
-        (exec-path (default-value 'exec-path)))
+(defun envrc--call-process-with-default-exec-path (&rest args)
+  "Like `call-process', but ensures the default `exec-path' is used.
+This ensures the globally-accessible \"direnv\" binary is
+consistently available.  ARGS is as for `call-process'."
+  (let ((exec-path (default-value 'exec-path)))
     (apply 'call-process args)))
 
 (defun envrc-reload ()
@@ -332,7 +336,7 @@ ARGS is as for `call-process'."
   (interactive)
   (envrc--with-required-current-env env-dir
     (let* ((default-directory env-dir)
-           (exit-code (envrc--call-process-in-default-env "direnv" nil (get-buffer-create "*envrc-allow*") nil "allow")))
+           (exit-code (envrc--call-process-with-default-exec-path "direnv" nil (get-buffer-create "*envrc-allow*") nil "allow")))
       (if (zerop exit-code)
           (envrc--update-env env-dir)
         (display-buffer "*envrc-allow*")))))
@@ -342,21 +346,20 @@ ARGS is as for `call-process'."
   (interactive)
   (envrc--with-required-current-env env-dir
     (let* ((default-directory env-dir)
-           (exit-code (envrc--call-process-in-default-env "direnv" nil (get-buffer-create "*envrc-deny*") nil "deny")))
+           (exit-code (envrc--call-process-with-default-exec-path "direnv" nil (get-buffer-create "*envrc-deny*") nil "deny")))
       (if (zerop exit-code)
-          (progn
-            (puthash env-dir 'error envrc--envs)
-            (envrc--apply-all env-dir))
+          (envrc--update-env env-dir)
         (display-buffer "*envrc-deny*")))))
 
 (defun envrc-reload-all ()
   "Reload direnvs for all buffers.
 This can be useful if a .envrc has been deleted."
   (interactive)
-  (clrhash envrc--envs)
+  (envrc--debug "Invalidating cache for all envs")
+  (clrhash envrc--cache)
   (dolist (buf (envrc--mode-buffers))
     (with-current-buffer buf
-      (envrc--register))))
+      (envrc--update))))
 
 
 (provide 'envrc)
