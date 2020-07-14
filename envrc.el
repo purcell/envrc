@@ -159,16 +159,15 @@ called `cd'"
       (setq env-dir (expand-file-name env-dir)))
     env-dir))
 
-(defun envrc--cache-key (env-dir process-environment)
-  "Get a hash key for the result of invoking direnv in ENV-DIR with PROCESS-ENVIRONMENT."
-  (mapconcat 'identity (cons env-dir process-environment) "\0"))
+(defun envrc--cache-key (env-dir process-env)
+  "Get a hash key for the result of invoking direnv in ENV-DIR with PROCESS-ENV."
+  (mapconcat 'identity (cons env-dir process-env) "\0"))
 
 (defun envrc--update ()
   "Add the current buffer's env, if any.
 All `envrc'-managed buffers with this env will have their
 environments updated."
   (let* ((env-dir (envrc--find-env-dir))
-         (initial-process-environment process-environment)
          (cache-key (envrc--cache-key env-dir process-environment)))
     ;; TODO: if no env-dir?
     (when env-dir
@@ -179,8 +178,8 @@ environments updated."
                       (cached cached))))
         (envrc--apply (current-buffer) result)
         ;; We assume direnv and envrc's use of it is idempotent, and
-        ;; add a cache entry for the resulting process-environment on
-        ;; that basis.
+        ;; add a cache entry for the new process-environment on that
+        ;; basis.
         (puthash (envrc--cache-key env-dir process-environment) result envrc--cache)))))
 
 (defmacro envrc--at-end-of-special-buffer (name &rest body)
