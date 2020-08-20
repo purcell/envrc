@@ -55,6 +55,7 @@
 ;; TODO: click on mode lighter to get details
 ;; TODO: handle when direnv is not installed?
 ;; TODO: provide a way to disable in certain projects?
+;; TODO: cleanup the cache?
 
 (require 'seq)
 (require 'json)
