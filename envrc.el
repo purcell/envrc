@@ -164,7 +164,7 @@ called `cd'"
   (mapconcat 'identity (cons env-dir process-env) "\0"))
 
 (defun envrc--update ()
-  "Add the current buffer's env, if any.
+  "Update the current buffer's environment if it is managed by direnv.
 All `envrc'-managed buffers with this env will have their
 environments updated."
   (let* ((env-dir (envrc--find-env-dir))
