@@ -147,9 +147,9 @@ One of '(none on error).")
     "]"))
 
 (defun envrc--find-env-dir ()
-  "Return the env dir for the current buffer, if any.
+  "Return the envrc directory for the current buffer, if any.
 This is based on a file scan.  In most cases we prefer to use the
-cached list of known dirs.
+cached list of known directories.
 
 Regardless of buffer file name, we always use
 `default-directory': the two should always match, unless the user
@@ -166,7 +166,7 @@ called `cd'"
 
 (defun envrc--update ()
   "Update the current buffer's environment if it is managed by direnv.
-All `envrc'-managed buffers with this env will have their
+All envrc.el-managed buffers with this env will have their
 environments updated."
   (let ((env-dir (envrc--find-env-dir)))
     ;; TODO: if no env-dir?
@@ -319,7 +319,7 @@ If there is no current env dir, abort with a user error."
      ,@body))
 
 (defun envrc--call-process-with-default-exec-path (&rest args)
-  "Like `call-process', but ensures the default `exec-path' is used.
+  "Like `call-process', but ensures the default variable `exec-path' is used.
 This ensures the globally-accessible \"direnv\" binary is
 consistently available.  ARGS is as for `call-process'."
   (let ((exec-path (default-value 'exec-path)))
@@ -364,3 +364,5 @@ This can be useful if a .envrc has been deleted."
 
 (provide 'envrc)
 ;;; envrc.el ends here
+
+;; LocalWords:  envrc direnv
