@@ -362,6 +362,16 @@ This can be useful if a .envrc has been deleted."
       (envrc--update))))
 
 
+;;;###autoload
+(define-derived-mode envrc-file-mode
+  sh-mode "envrc"
+  "Major mode for .envrc files as used by direnv.
+\\{envrc-file-mode-map}")
+
+;;;###autoload
+(add-to-list 'auto-mode-alist '("\\.envrc\\'" . envrc-file-mode))
+
+
 (provide 'envrc)
 ;;; envrc.el ends here
 
