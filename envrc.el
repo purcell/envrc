@@ -126,7 +126,7 @@ e.g. (define-key envrc-mode-map (kbd \"C-c e\") 'envrc-command-map)"
 ;;; Global state
 
 (defvar envrc--cache (make-hash-table :test 'equal :size 10)
-  "Known envrc directories and their direnv results, as produced by `envrc--export'.")
+  "Known envrc directories and their process environments, as produced by `envrc--create-env'.")
 
 ;;; Local state
 
@@ -174,7 +174,7 @@ environments updated."
     (when env-dir
       (let* ((cache-key (envrc--cache-key env-dir process-environment))
              (result (pcase (gethash cache-key envrc--cache 'missing)
-                       (`missing (let ((calculated (envrc--export env-dir)))
+                       (`missing (let ((calculated (envrc--create-env env-dir)))
                                    (puthash cache-key calculated envrc--cache)
                                    calculated))
                        (cached cached))))
@@ -214,10 +214,10 @@ MSG and ARGS are as for that function."
         (lambda (a b) (or (envrc--directory-path-deeper-p b a)
                           (string< a b)))))
 
-(defun envrc--export (env-dir)
-  "Export the env vars for ENV-DIR using direnv.
-Return value is either 'error, 'none, or an alist of environment
-variable names and values."
+(defun envrc--create-env (env-dir)
+  "Export the env vars for ENV-DIR using direnv and create a process environment
+by merging the vars with the current environment.
+Return value is either 'error, 'none, or list that can be assigned to `process-environment'"
   (unless (file-exists-p (expand-file-name ".envrc" env-dir))
     (error "%s is not a directory with a .envrc" env-dir))
   (message "Running direnv in %s..." env-dir)
@@ -234,7 +234,9 @@ variable names and values."
                     (if (zerop (buffer-size))
                         (setq result 'none)
                       (goto-char (point-min))
-                      (setq result (let ((json-key-type 'string)) (json-read-object)))))
+                      (setq result (envrc--merged-environment
+                                    process-environment
+                                    (let ((json-key-type 'string)) (json-read-object))))))
                 (message "Direnv failed in %s" env-dir)
                 (setq result 'error))
               (envrc--at-end-of-special-buffer "*envrc*"
@@ -276,15 +278,15 @@ also appear in PAIRS."
 
 
 (defun envrc--apply (buf result)
-  "Update BUF with RESULT, which is a result of `envrc--export'."
+  "Update BUF with RESULT, which is a result of `envrc--create-env'."
   (with-current-buffer buf
     (setq-local envrc--status (if (listp result) 'on result))
     (if (memq result '(none error))
         (progn
           (envrc--clear buf)
           (envrc--debug "[%s] reset environment to default" buf))
-      (envrc--debug "[%s] applied merged environment" buf)
-      (setq-local process-environment (envrc--merged-environment process-environment result))
+      (envrc--debug "[%s] applied environment" buf)
+      (setq-local process-environment result)
       (let ((path (getenv "PATH"))) ;; Get PATH from the merged environment: direnv may not have changed it
         (setq-local exec-path (parse-colon-path path))
         (when (derived-mode-p 'eshell-mode)
