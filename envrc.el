@@ -106,7 +106,8 @@ e.g. (define-key envrc-mode-map (kbd \"C-c e\") 'envrc-command-map)"
   :keymap envrc-mode-map
   (if envrc-mode
       (envrc--update)
-    (envrc--clear (current-buffer))))
+    (envrc--clear (current-buffer))
+    (kill-local-variable 'envrc--status)))
 
 ;;;###autoload
 (define-globalized-minor-mode envrc-global-mode envrc-mode
