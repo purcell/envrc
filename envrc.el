@@ -361,6 +361,22 @@ This can be useful if a .envrc has been deleted."
     (with-current-buffer buf
       (envrc--update))))
 
+
+
+;;; Propagate local environment to commands that use temp buffers
+
+(defun envrc-propagate-environment (orig &rest args)
+  (if envrc-mode
+      (cl-letf* (((default-value 'process-environment) process-environment)
+                 ((default-value 'exec-path) exec-path))
+        (apply orig args))
+    (apply orig args)))
+
+(advice-add 'shell-command-to-string :around #'envrc-propagate-environment)
+
+
+;;; Major mode for .envrc files
+
 (defvar envrc-file-extra-keywords
   '("MANPATH_add" "PATH_add" "direnv_layout_dir" "direnv_load" "dotenv"
     "expand_path" "find_up" "has" "join_args" "layout" "load_prefix"
