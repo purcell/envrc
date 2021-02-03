@@ -5,7 +5,7 @@
 ;; Author: Steve Purcell <steve@sanityinc.com>
 ;; Keywords: processes, tools
 ;; Homepage: https://github.com/purcell/envrc
-;; Package-Requires: ((seq "2") (emacs "24.4"))
+;; Package-Requires: ((seq "2") (emacs "24.4") (inheritenv "0.1"))
 ;; Package-Version: 0
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -366,10 +366,11 @@ This can be useful if a .envrc has been deleted."
 ;;; Propagate local environment to commands that use temp buffers
 
 (defun envrc-propagate-environment (orig &rest args)
+  "Advice function to wrap a command ORIG and make it use our local env.
+This can be used to force compliance where ORIG starts processes
+in a temp buffer.  ARGS is as for ORIG."
   (if envrc-mode
-      (cl-letf* (((default-value 'process-environment) process-environment)
-                 ((default-value 'exec-path) exec-path))
-        (apply orig args))
+      (inheritenv (apply orig args))
     (apply orig args)))
 
 (advice-add 'shell-command-to-string :around #'envrc-propagate-environment)
