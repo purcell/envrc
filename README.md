@@ -13,15 +13,55 @@ the environment variables specified in those files. This allows
 different versions of linters and other tools to be used in each
 project if desired.
 
-## Design notes
+This library is like [the `direnv.el`
+package](https://github.com/wbolster/emacs-direnv), but sets all
+environment variables buffer-locally, while `direnv.el` changes
+the global set of environment variables after each command.
 
-There is already [an excellent `direnv.el`
-package](https://github.com/wbolster/emacs-direnv) available, which
-works in a certain way that has particular trade-offs. I wanted to
-explore a different approach. *The existing `direnv` package has many
-happy users, and I make no claim that this one is better: it is just
-different. Additionally, the `envrc.el` package is at an earlier stage
-of development, and likely has bugs.*
+## Installation
+
+Installable packages are available via MELPA: do
+`M-x package-install RET envrc RET`.
+
+Alternatively, [download][]
+the latest release or clone the repository, and install
+`envrc.el` with `M-x package-install-file`.
+
+## Usage
+
+Add the following to your `init.el` (after calling `package-initialize`):
+
+```el
+(envrc-global-mode)
+```
+
+It's probably wise to do this *late in your startup sequence*: you
+normally want `envrc-mode` to be initialized in each buffer *before*
+other minor modes like `flycheck-mode` which might look for
+executables. Counter-intuitively, this means that `envrc-global-mode`
+should be enabled *after* other global minor modes, since each
+_prepends_ itself to various hooks.
+
+You should only enable the mode if `direnv` is installed and available
+in the default Emacs `exec-path`. (There is a local minor mode
+`envrc-mode`, but you should not try to enable this granularly,
+e.g. for certain modes or projects, because compilation and other
+buffers might not get set up with the right environment.)
+
+Regarding interaction with the mode, see `envrc-mode-map`, and the
+commands `envrc-reload`, `envrc-allow` and `envrc-deny`. (There's also
+`envrc-reload-all` as a "nuclear" reset, for now!)
+
+In particular, you can enable keybindings for the above commands by
+binding your preferred prefix to `envrc-command-map` in
+`envrc-mode-map`, e.g.
+
+```el
+(with-eval-after-load 'envrc
+  (define-key envrc-mode-map (kbd "C-c e") 'envrc-command-map))
+```
+
+## Design notes
 
 By default, Emacs has a single global set of environment variables
 used for all subprocesses, stored in the `process-environment`
@@ -94,48 +134,7 @@ It's also possible that there's a way to call `direnv` more
 aggressively by allowing it to see values of `DIRENV_*` obtained
 previously such that it becomes a no-op.
 
-## Installation
 
-Installable packages are available via MELPA: do
-`M-x package-install RET envrc RET`.
-
-Alternatively, [download][]
-the latest release or clone the repository, and install
-`envrc.el` with `M-x package-install-file`.
-
-## Usage
-
-Add the following to your `init.el` (after calling `package-initialize`):
-
-```el
-(envrc-global-mode)
-```
-
-It's probably wise to do this *late in your startup sequence*: you
-normally want `envrc-mode` to be initialized in each buffer before
-other minor modes like `flycheck-mode` which might look for
-executables. Counter-intuitively, this means that `envrc-global-mode`
-should be enabled *after* other global minor modes, since each
-_prepends_ itself to various hooks.
-
-You should only enable the mode if `direnv` is installed and available
-in the default Emacs `exec-path`. (There is a local minor mode
-`envrc-mode`, but you should not try to enable this granularly,
-e.g. for certain modes or projects, because compilation and other
-buffers might not get set up with the right environment.)
-
-Regarding interaction with the mode, see `envrc-mode-map`, and the
-commands `envrc-reload`, `envrc-allow` and `envrc-deny`. (There's also
-`envrc-reload-all` as a "nuclear" reset, for now!)
-
-In particular, you can enable keybindings for the above commands by
-binding your preferred prefix to `envrc-command-map` in
-`envrc-mode-map`, e.g.
-
-```el
-(with-eval-after-load 'envrc
-  (define-key envrc-mode-map (kbd "C-c e") 'envrc-command-map))
-```
 
 [download]: https://github.com/purcell/envrc/tags
 
