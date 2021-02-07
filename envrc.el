@@ -62,6 +62,7 @@
 (require 'subr-x)
 (require 'ansi-color)
 (require 'cl-lib)
+(require 'inheritenv)
 
 ;;; Custom vars and minor modes
 
