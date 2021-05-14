@@ -80,6 +80,10 @@ Messages are written into the *envrc-debug* buffer."
 You can set this to nil to disable the lighter."
   :type 'sexp)
 
+(defcustom envrc-hide-lighter-on-none nil
+  "Whether to hide env[none] modeline in `envrc-mode'."
+  :type 'boolean)
+
 (put 'envrc--lighter 'risky-local-variable t)
 
 (defcustom envrc-command-map
@@ -138,14 +142,15 @@ One of '(none on error).")
 
 (defun envrc--lighter ()
   "Return a colourised version of `envrc--status' for use in the mode line."
-  `(" env["
-    (:propertize ,(symbol-name envrc--status)
-                 face
-                 ,(pcase envrc--status
-                    (`on 'envrc-mode-line-on-face)
-                    (`error 'envrc-mode-line-error-face)
-                    (`none 'envrc-mode-line-none-face)))
-    "]"))
+  (if (and envrc-hide-lighter-on-none (eq envrc--status 'none))
+      ""
+    `(" env["
+      (:propertize ,(symbol-name envrc--status)
+                   face
+                   ,(pcase envrc--status (`on 'envrc-mode-line-on-face)
+                           (`error 'envrc-mode-line-error-face)
+                           (`none 'envrc-mode-line-none-face)))
+      "]")))
 
 (defun envrc--find-env-dir ()
   "Return the envrc directory for the current buffer, if any.
