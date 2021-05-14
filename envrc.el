@@ -170,19 +170,19 @@ called `cd'"
 All envrc.el-managed buffers with this env will have their
 environments updated."
   (let ((env-dir (envrc--find-env-dir)))
-    ;; TODO: if no env-dir?
-    (when env-dir
-      (let* ((cache-key (envrc--cache-key env-dir process-environment))
-             (result (pcase (gethash cache-key envrc--cache 'missing)
-                       (`missing (let ((calculated (envrc--export env-dir)))
-                                   (puthash cache-key calculated envrc--cache)
-                                   calculated))
-                       (cached cached))))
-        (envrc--apply (current-buffer) result)
-        ;; We assume direnv and envrc's use of it is idempotent, and
-        ;; add a cache entry for the new process-environment on that
-        ;; basis.
-        (puthash (envrc--cache-key env-dir process-environment) result envrc--cache)))))
+    (if env-dir
+        (let* ((cache-key (envrc--cache-key env-dir process-environment))
+               (result (pcase (gethash cache-key envrc--cache 'missing)
+                         (`missing (let ((calculated (envrc--export env-dir)))
+                                     (puthash cache-key calculated envrc--cache)
+                                     calculated))
+                         (cached cached))))
+          (envrc--apply (current-buffer) result)
+          ;; We assume direnv and envrc's use of it is idempotent, and
+          ;; add a cache entry for the new process-environment on that
+          ;; basis.
+          (puthash (envrc--cache-key env-dir process-environment) result envrc--cache))
+      (envrc--apply (current-buffer) 'none))))
 
 (defmacro envrc--at-end-of-special-buffer (name &rest body)
   "At the end of `special-mode' buffer NAME, execute BODY.
