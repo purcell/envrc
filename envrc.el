@@ -75,12 +75,25 @@
 Messages are written into the *envrc-debug* buffer."
   :type 'boolean)
 
-(defcustom envrc--lighter '(:eval (envrc--lighter))
+(define-obsolete-variable-alias 'envrc--lighter 'envrc-lighter "2021-05-17")
+
+(defcustom envrc-lighter '(:eval (envrc--lighter))
   "The mode line lighter for `envrc-mode'.
 You can set this to nil to disable the lighter."
   :type 'sexp)
+(put 'envrc-lighter 'risky-local-variable t)
 
-(put 'envrc--lighter 'risky-local-variable t)
+(defcustom envrc-none-lighter '(" envrc[" (:propertize "none" face envrc-mode-line-none-face) "]")
+  "Lighter spec used by the default `envrc-lighter' when envrc is inactive."
+  :type 'sexp)
+
+(defcustom envrc-on-lighter '(" envrc[" (:propertize "on" face envrc-mode-line-on-face) "]")
+  "Lighter spec used by the default `envrc-lighter' when envrc is on."
+  :type 'sexp)
+
+(defcustom envrc-error-lighter '(" envrc[" (:propertize "error" face envrc-mode-line-error-face) "]")
+  "Lighter spec used by the default `envrc-lighter' when envrc has errored."
+  :type 'sexp)
 
 (defcustom envrc-command-map
   (let ((map (make-sparse-keymap)))
@@ -103,7 +116,7 @@ e.g. (define-key envrc-mode-map (kbd \"C-c e\") 'envrc-command-map)"
 (define-minor-mode envrc-mode
   "A local minor mode in which env vars are set by direnv."
   :init-value nil
-  :lighter envrc--lighter
+  :lighter envrc-lighter
   :keymap envrc-mode-map
   (if envrc-mode
       (envrc--update)
@@ -112,7 +125,7 @@ e.g. (define-key envrc-mode-map (kbd \"C-c e\") 'envrc-command-map)"
 ;;;###autoload
 (define-globalized-minor-mode envrc-global-mode envrc-mode
   (lambda () (unless (or (minibufferp) (file-remote-p default-directory))
-          (envrc-mode 1))))
+               (envrc-mode 1))))
 
 (defface envrc-mode-line-on-face '((t :inherit success))
   "Face used in mode line to indicate that direnv is in effect.")
@@ -138,14 +151,10 @@ One of '(none on error).")
 
 (defun envrc--lighter ()
   "Return a colourised version of `envrc--status' for use in the mode line."
-  `(" env["
-    (:propertize ,(symbol-name envrc--status)
-                 face
-                 ,(pcase envrc--status
-                    (`on 'envrc-mode-line-on-face)
-                    (`error 'envrc-mode-line-error-face)
-                    (`none 'envrc-mode-line-none-face)))
-    "]"))
+  (pcase envrc--status
+    (`on envrc-on-lighter)
+    (`error envrc-error-lighter)
+    (`none envrc-none-lighter)))
 
 (defun envrc--find-env-dir ()
   "Return the envrc directory for the current buffer, if any.
