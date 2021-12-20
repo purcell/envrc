@@ -412,3 +412,7 @@ in a temp buffer.  ARGS is as for ORIG."
 ;;; envrc.el ends here
 
 ;; LocalWords:  envrc direnv
+
+;; Local Variables:
+;; indent-tabs-mode: nil
+;; End:
