@@ -69,24 +69,11 @@ variable. `direnv.el` switches that global environment using values
 from `direnv` when the user performs certain actions, such as
 switching between buffers in different projects.
 
-In practice, this is simple and mostly works very well. But some
-trade-offs of this simple approach are:
+In practice, this is simple and mostly works very well. But there are
+some quirks, and it feels wrong to me to mutate the global environment
+in order to support per-directory environments.
 
-* When switching to a buffer that is not "inside" a project with an
-  `.envrc` file, the buffer will see the last project's environment. I
-  would prefer it to see the default Emacs environment.
-
-* When `direnv` fails to execute in the course of switching to a
-  buffer in a new project with an `.envrc` file (e.g. because that
-  `.envrc` file is disallowed), buffers in the new project will see the
-  environment variables from the previous project.
-
-* Background buffers from a previous project will start seeing the new
-  project's environment, so any processes they launch asynchronously
-  after the switch will use the wrong environment. (This is probably
-  quite rare in practice.)
-
-Now, it is also possible to set `process-environment` locally in a
+Now, in Emacs we can also set `process-environment` locally in a
 buffer. If this value could be correctly maintained in all buffers
 based on their various respective `.envrc` files, then buffers across
 multiple projects could simultaneously be "connected" to the
