@@ -384,6 +384,7 @@ in a temp buffer.  ARGS is as for ORIG."
     (apply orig args)))
 
 (advice-add 'shell-command-to-string :around #'envrc-propagate-environment)
+(advice-add 'org-babel-eval :around #'envrc-propagate-environment)
 
 
 ;;; Major mode for .envrc files
