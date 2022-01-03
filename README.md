@@ -61,6 +61,20 @@ binding your preferred prefix to `envrc-command-map` in
   (define-key envrc-mode-map (kbd "C-c e") 'envrc-command-map))
 ```
 
+## Troubleshooting
+
+If you find that a particular Emacs command isn't picking up the
+environment of your current buffer, and you're sure that `envrc-mode`
+is active in that buffer, then it's possible you've found code that
+runs a process in a temp buffer and neglects to propagate your
+environment to that buffer before doing so.
+
+A couple of common Emacs commands that suffer from this defect are also
+patched directly via advice in `envrc.el` — `shell-command-to-string`
+is a prominent example!
+
+The `inheritenv` package was designed to handle this case in general.
+
 ## Design notes
 
 By default, Emacs has a single global set of environment variables
