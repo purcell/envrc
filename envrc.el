@@ -213,16 +213,6 @@ MSG and ARGS are as for that function."
       (insert (apply 'format msg args))
       (newline))))
 
-(defun envrc--directory-path-deeper-p (a b)
-  "Return non-nil if directory path B is deeper than directory path A."
-  (string-prefix-p (file-name-as-directory a) (file-name-as-directory b)))
-
-(defun envrc--deepest-paths-first (paths)
-  "Sort PATHS such that the deepest paths in a hierarchy appear first."
-  (sort paths
-        (lambda (a b) (or (envrc--directory-path-deeper-p b a)
-                          (string< a b)))))
-
 (defun envrc--export (env-dir)
   "Export the env vars for ENV-DIR using direnv.
 Return value is either 'error, 'none, or an alist of environment
