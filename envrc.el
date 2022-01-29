@@ -339,7 +339,8 @@ consistently available.  ARGS is as for `call-process'."
            (exit-code (envrc--call-process-with-default-exec-path "direnv" nil (get-buffer-create "*envrc-allow*") nil "allow")))
       (if (zerop exit-code)
           (envrc--update-env env-dir)
-        (display-buffer "*envrc-allow*")))))
+        (display-buffer "*envrc-allow*")
+        (user-error "Error running direnv allow")))))
 
 (defun envrc-deny ()
   "Run \"direnv deny\" in the current env."
@@ -349,7 +350,8 @@ consistently available.  ARGS is as for `call-process'."
            (exit-code (envrc--call-process-with-default-exec-path "direnv" nil (get-buffer-create "*envrc-deny*") nil "deny")))
       (if (zerop exit-code)
           (envrc--update-env env-dir)
-        (display-buffer "*envrc-deny*")))))
+        (display-buffer "*envrc-deny*")
+        (user-error "Error running direnv deny")))))
 
 (defun envrc-reload-all ()
   "Reload direnvs for all buffers.

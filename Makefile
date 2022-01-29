@@ -14,7 +14,10 @@ INIT_PACKAGES="(progn \
       (package-install pkg))) \
   )"
 
-all: compile package-lint clean-elc
+all: compile test package-lint clean-elc
+
+test:
+	${EMACS} -Q --eval ${INIT_PACKAGES} -batch -l envrc.el -l envrc-tests.el --eval "(ert t)"
 
 package-lint:
 	${EMACS} -Q --eval ${INIT_PACKAGES} -batch -f package-lint-batch-and-exit envrc.el
