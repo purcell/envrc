@@ -225,8 +225,13 @@ variable names and values."
     (unwind-protect
         (let ((default-directory env-dir))
           (with-temp-buffer
-            (let ((exit-code (envrc--call-process-with-default-exec-path "direnv" nil (list t stderr-file) nil "export" "json")))
-              (envrc--debug "Direnv exited with %s and output: %S" exit-code (buffer-string))
+            (let ((exit-code (envrc--call-process-with-global-env' "direnv" nil (list t stderr-file) nil "export" "json")))
+              (envrc--debug "Direnv exited with %s and stderr=%S, stdout=%S"
+                            exit-code
+                            (with-temp-buffer
+                              (insert-file-contents stderr-file)
+                              (buffer-string))
+                            (buffer-string))
               (if (zerop exit-code)
                   (progn
                     (message "Direnv succeeded in %s" env-dir)
