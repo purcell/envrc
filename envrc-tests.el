@@ -46,8 +46,8 @@
   (envrc-tests--with-temp-directory _
     (with-temp-buffer
       (envrc-mode 1)
-      (should (not (local-variable-p 'process-environment)))
-      (should (eq envrc--status 'none)))))
+      (should (eq envrc--status 'none))
+      (should (not (local-variable-p 'process-environment))))))
 
 (ert-deftest envrc-no-op-unless-allowed ()
   "When the .envrc isn't allowed, do nothing."
@@ -140,6 +140,21 @@
 
       (should (eq envrc--status 'error))
       (should (not (local-variable-p 'process-environment))))))
+
+(ert-deftest envrc-remove-variable ()
+  (envrc-tests--with-temp-directory _
+    (with-temp-file ".envrc"
+      (insert "export FOO=BAR"))
+
+    (envrc-tests--exec "allow")
+
+    (with-temp-buffer
+      (envrc-mode 1)
+      (should (equal "BAR" (getenv "FOO")))
+      (with-temp-file ".envrc"
+        (insert ""))
+      (envrc-allow)
+      (should (equal nil (getenv "FOO"))))))
 
 
 ;; TODO:

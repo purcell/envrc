@@ -171,7 +171,9 @@ called `cd'"
     env-dir))
 
 (defun envrc--cache-key (env-dir process-env)
-  "Get a hash key for the result of invoking direnv in ENV-DIR with PROCESS-ENV."
+  "Get a hash key for the result of invoking direnv in ENV-DIR with PROCESS-ENV.
+PROCESS-ENV should be the environment in which direnv was run,
+since its output can vary according to its initial environment."
   (mapconcat 'identity (cons env-dir process-env) "\0"))
 
 (defun envrc--update ()
@@ -179,19 +181,16 @@ called `cd'"
 All envrc.el-managed buffers with this env will have their
 environments updated."
   (let ((env-dir (envrc--find-env-dir)))
-    (if env-dir
-        (let* ((cache-key (envrc--cache-key env-dir process-environment))
-               (result (pcase (gethash cache-key envrc--cache 'missing)
-                         (`missing (let ((calculated (envrc--export env-dir)))
-                                     (puthash cache-key calculated envrc--cache)
-                                     calculated))
-                         (cached cached))))
-          (envrc--apply (current-buffer) result)
-          ;; We assume direnv and envrc's use of it is idempotent, and
-          ;; add a cache entry for the new process-environment on that
-          ;; basis.
-          (puthash (envrc--cache-key env-dir process-environment) result envrc--cache))
-      (envrc--apply (current-buffer) 'none))))
+    (let ((result
+           (if env-dir
+               (let ((cache-key (envrc--cache-key env-dir (default-value 'process-environment))))
+                 (pcase (gethash cache-key envrc--cache 'missing)
+                   (`missing (let ((calculated (envrc--export env-dir)))
+                               (puthash cache-key calculated envrc--cache)
+                               calculated))
+                   (cached cached)))
+             'none)))
+      (envrc--apply (current-buffer) result))))
 
 (defmacro envrc--at-end-of-special-buffer (name &rest body)
   "At the end of `special-mode' buffer NAME, execute BODY.
@@ -288,7 +287,7 @@ also appear in PAIRS."
           (envrc--clear buf)
           (envrc--debug "[%s] reset environment to default" buf))
       (envrc--debug "[%s] applied merged environment" buf)
-      (setq-local process-environment (envrc--merged-environment process-environment result))
+      (setq-local process-environment (envrc--merged-environment (default-value 'process-environment) result))
       (let ((path (getenv "PATH"))) ;; Get PATH from the merged environment: direnv may not have changed it
         (setq-local exec-path (parse-colon-path path))
         (when (derived-mode-p 'eshell-mode)
@@ -323,11 +322,14 @@ If there is no current env dir, abort with a user error."
        (user-error "No enclosing .envrc"))
      ,@body))
 
-(defun envrc--call-process-with-default-exec-path (&rest args)
-  "Like `call-process', but ensures the default variable `exec-path' is used.
-This ensures the globally-accessible \"direnv\" binary is
-consistently available.  ARGS is as for `call-process'."
-  (let ((exec-path (default-value 'exec-path)))
+(defun envrc--call-process-with-global-env (&rest args)
+  "Like `call-process', but always use the global process environment.
+In particular, we ensure the default variable `exec-path' and
+`process-environment' are used.  This ensures the
+globally-accessible \"direnv\" binary is consistently available.
+ARGS is as for `call-process'."
+  (let ((exec-path (default-value 'exec-path))
+        (process-environment (default-value 'process-environment)))
     (apply 'call-process args)))
 
 (defun envrc-reload ()
@@ -341,7 +343,7 @@ consistently available.  ARGS is as for `call-process'."
   (interactive)
   (envrc--with-required-current-env env-dir
     (let* ((default-directory env-dir)
-           (exit-code (envrc--call-process-with-default-exec-path "direnv" nil (get-buffer-create "*envrc-allow*") nil "allow")))
+           (exit-code (envrc--call-process-with-global-env' "direnv" nil (get-buffer-create "*envrc-allow*") nil "allow")))
       (if (zerop exit-code)
           (envrc--update-env env-dir)
         (display-buffer "*envrc-allow*")
@@ -352,7 +354,7 @@ consistently available.  ARGS is as for `call-process'."
   (interactive)
   (envrc--with-required-current-env env-dir
     (let* ((default-directory env-dir)
-           (exit-code (envrc--call-process-with-default-exec-path "direnv" nil (get-buffer-create "*envrc-deny*") nil "deny")))
+           (exit-code (envrc--call-process-with-global-env' "direnv" nil (get-buffer-create "*envrc-deny*") nil "deny")))
       (if (zerop exit-code)
           (envrc--update-env env-dir)
         (display-buffer "*envrc-deny*")
