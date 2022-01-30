@@ -31,8 +31,21 @@
 
 (setq envrc-debug t)
 
+
+
 (defun envrc-tests--exec (&rest args)
   (should (apply 'call-process "direnv" nil nil nil args)))
+
+(defmacro envrc-tests--with-extra-global-env-var (key val &rest body)
+  "Temporarily set var KEY to VAL in the global `process-environment', while BODY is evaluated."
+  (declare (indent 2))
+  (let ((old-env (gensym)))
+    `(let ((,old-env (default-value 'process-environment)))
+       (push (format "%s=%s" ,key ,val) (default-value 'process-environment))
+       (unwind-protect
+           (progn
+             ,@body)
+         (setq-default process-environment ,old-env)))))
 
 (defmacro envrc-tests--with-temp-directory (var &rest body)
   "Create a temporary directory, bind it to VAR, make it current, and execute BODY."
@@ -48,6 +61,8 @@
       (envrc-mode 1)
       (should (eq envrc--status 'none))
       (should (not (local-variable-p 'process-environment))))))
+
+
 
 (ert-deftest envrc-no-op-unless-allowed ()
   "When the .envrc isn't allowed, do nothing."
@@ -117,6 +132,19 @@
       (envrc-reload)
       (should (equal "BAZ" (getenv "FOO"))))))
 
+(ert-deftest envrc-masks-global-var-when-overridden ()
+  (envrc-tests--with-extra-global-env-var "FOO" "BANANA"
+    (envrc-tests--with-temp-directory _
+      (with-temp-file ".envrc"
+        (insert "export FOO=BAR"))
+
+      (envrc-tests--exec "allow")
+
+      (with-temp-buffer
+        (should (equal "BANANA" (getenv "FOO")))
+        (envrc-mode 1)
+        (should (equal "BAR" (getenv "FOO")))))))
+
 (ert-deftest envrc-state-shared-between-buffers-in-dir ()
   (envrc-tests--with-temp-directory _
     (with-temp-file ".envrc"
@@ -156,6 +184,30 @@
       (envrc-allow)
       (should (equal nil (getenv "FOO"))))))
 
+(ert-deftest envrc-cache-is-refreshed-if-global-env-changes ()
+  (envrc-tests--with-temp-directory _
+    (with-temp-file ".envrc"
+      (insert "export FOO=BAR"))
+
+    (envrc-tests--exec "allow")
+
+    (with-temp-buffer
+      (envrc-mode 1)
+      (should (equal "BAR" (getenv "FOO")))
+      (envrc-tests--with-extra-global-env-var (symbol-name (gensym)) "blah"
+
+        (with-temp-file ".envrc"
+          (insert "export FOO=BAZ"))
+        (envrc-tests--exec "allow")
+        (with-temp-buffer
+          ;; We expect a cache miss, and therefore a refresh
+          (envrc--debug "buffer is %S" (current-buffer))
+          (envrc-mode 1)
+          (should (local-variable-p 'process-environment))
+          (should (equal "BAZ" (getenv "FOO"))))
+
+        (should (local-variable-p 'process-environment))
+        (should (equal "BAZ" (getenv "FOO")))))))
 
 ;; TODO:
 ;; - Setting exec-path and eshell-path-env
