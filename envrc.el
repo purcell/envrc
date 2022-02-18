@@ -156,6 +156,12 @@ One of '(none on error).")
     (`error envrc-error-lighter)
     (`none envrc-none-lighter)))
 
+(defun envrc--env-dir-p (dir)
+  "Return non-nil if DIR contains a config file for direnv."
+  (or
+   (file-exists-p (expand-file-name ".envrc" dir))
+   (file-exists-p (expand-file-name ".env" dir))))
+
 (defun envrc--find-env-dir ()
   "Return the envrc directory for the current buffer, if any.
 This is based on a file scan.  In most cases we prefer to use the
@@ -164,7 +170,7 @@ cached list of known directories.
 Regardless of buffer file name, we always use
 `default-directory': the two should always match, unless the user
 called `cd'"
-  (let ((env-dir (locate-dominating-file default-directory ".envrc")))
+  (let ((env-dir (locate-dominating-file default-directory #'envrc--env-dir-p)))
     (when env-dir
       ;; `locate-dominating-file' appears to sometimes return abbreviated paths, e.g. with ~
       (setq env-dir (expand-file-name env-dir)))
@@ -216,7 +222,7 @@ MSG and ARGS are as for that function."
   "Export the env vars for ENV-DIR using direnv.
 Return value is either 'error, 'none, or an alist of environment
 variable names and values."
-  (unless (file-exists-p (expand-file-name ".envrc" env-dir))
+  (unless (envrc--env-dir-p env-dir)
     (error "%s is not a directory with a .envrc" env-dir))
   (message "Running direnv in %s..." env-dir)
   (let ((stderr-file (make-temp-file "envrc"))
