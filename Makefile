@@ -17,7 +17,7 @@ INIT_PACKAGES="(progn \
 all: compile test package-lint clean-elc
 
 test:
-	${EMACS} -Q --eval ${INIT_PACKAGES} -batch -l envrc.el -l envrc-tests.el --eval -f ert-run-tests-batch-and-exit
+	${EMACS} -Q --eval ${INIT_PACKAGES} -batch -l envrc.el -l envrc-tests.el -f ert-run-tests-batch-and-exit
 
 package-lint:
 	${EMACS} -Q --eval ${INIT_PACKAGES} -batch -f package-lint-batch-and-exit envrc.el
