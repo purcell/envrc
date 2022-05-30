@@ -398,7 +398,7 @@ in a temp buffer.  ARGS is as for ORIG."
   '("MANPATH_add" "PATH_add" "direnv_layout_dir" "direnv_load" "dotenv"
     "expand_path" "find_up" "has" "join_args" "layout" "load_prefix"
     "log_error" "log_status" "path_add" "rvm" "source_env" "source_up"
-    "use" "use_guix" "use_nix" "user_rel_path" "watch_file")
+    "use" "use_guix" "use_flake" "use_nix" "user_rel_path" "watch_file")
   "Useful direnv keywords to be highlighted.")
 
 ;;;###autoload
