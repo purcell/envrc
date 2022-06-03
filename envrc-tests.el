@@ -65,6 +65,10 @@
 
 
 
+(ert-deftest envrc-direnv-is-available ()
+  "Check the executable is executable!"
+  (should (executable-find "direnv")))
+
 (ert-deftest envrc-no-op-unless-allowed ()
   "When the .envrc isn't allowed, do nothing."
   (envrc-tests--with-temp-directory _
