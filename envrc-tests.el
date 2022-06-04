@@ -51,9 +51,20 @@
 (defmacro envrc-tests--with-temp-directory (var &rest body)
   "Create a temporary directory, bind it to VAR, make it current, and execute BODY."
   (declare (indent 1))
-  `(let* ((default-directory (make-temp-file "envrc" t))
-          (,var default-directory))
-     ,@body))
+  (let ((passed (cl-gensym)))
+    `(let* ((default-directory (make-temp-file "envrc" t))
+            (envrc-debug t)
+            ,passed
+            (,var default-directory))
+       (unwind-protect
+           (progn
+             (when (get-buffer "*envrc-debug*")
+               (kill-buffer "*envrc-debug*"))
+             ,@body
+             (setq ,passed t))
+         (unless ,passed
+           (message "Debug output: %s"
+                    (with-current-buffer "*envrc-debug*" (buffer-string))))))))
 
 (ert-deftest envrc-no-op ()
   "When there's no .envrc, do nothing."
