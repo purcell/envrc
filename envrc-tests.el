@@ -215,16 +215,19 @@
         ;; (should (equal "BAZ" (getenv "FOO")))
         ))))
 
-(ert-deftest envrc-fall-back-to-env-files ()
-  (envrc-tests--with-temp-directory _
-    (with-temp-file ".env"
-      (insert "FOO=BAR"))
+;; ;; Now requires a per-user config setting for direnv,
+;; ;; so tests will fail by default.
+;; (ert-deftest envrc-fall-back-to-env-files ()
+;;   (envrc-tests--with-temp-directory _
+;;     (with-temp-file ".env"
+;;       (insert "FOO=BAR"))
 
-    (envrc-tests--exec "allow")
+;;     (envrc-tests--exec "allow")
 
-    (with-temp-buffer
-      (envrc-mode 1)
-      (should (equal "BAR" (getenv "FOO"))))))
+;;     (with-temp-buffer
+;;       (envrc-mode 1)
+;;       (should (equal "BAR" (getenv "FOO"))))))
+
 
 ;; TODO:
 ;; - Setting exec-path and eshell-path-env
