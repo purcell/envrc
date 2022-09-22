@@ -112,6 +112,11 @@ To access `envrc-command-map' from this map, give it a prefix keybinding,
 e.g. (define-key envrc-mode-map (kbd \"C-c e\") 'envrc-command-map)"
   :type 'keymap)
 
+(defcustom envrc-cloak-vars-at-startup nil
+  "Cloak variables at startup, it will replace their display values with *."
+  :group 'envrc
+  :type 'boolean)
+
 ;;;###autoload
 (define-minor-mode envrc-mode
   "A local minor mode in which env vars are set by direnv."
@@ -403,6 +408,44 @@ in a temp buffer.  ARGS is as for ORIG."
     "source_up" "source_up_if_exists" "source_url" "strict_env" "unstrict_env"
     "use" "user_rel_path" "watch_dir" "watch_file")
   "Useful direnv keywords to be highlighted.")
+
+(defvar envrc-var-regex
+  (concat "\\([a-zA-Z0-9_]+\\)[ \t]*=[ \t]*\\(.*+\\)$")
+  "Regex to extract value from variables.")
+
+(defun envrc-toggle-cloak ()
+  "Toggle cloak variables."
+  (interactive)
+  (envrc--run-cloak-in-buffer (not (envrc--has-display-property))))
+
+(defun envrc-cloak-at-startup ()
+  "Cloak variables at startup depending of `envrc-cloak-vars-at-startup' flag."
+  (interactive)
+  (when envrc-cloak-vars-at-startup
+    (envrc--run-cloak-in-buffer t)))
+
+(defun envrc--has-display-property ()
+  "Check if any text in the buffer has a display property."
+  (save-excursion
+    (goto-char (point-min))
+    (text-property-search-forward 'display)))
+
+(defun envrc--run-cloak-in-buffer (flag)
+  "Run cloaking using FLAG in current buffer."
+  (save-excursion
+    (goto-char (point-min))
+    (while (search-forward-regexp envrc-var-regex (point-max) t)
+      (if (match-string 2)
+          (envrc--cloak-text (match-beginning 2) (match-end 2) flag)))))
+
+(defun envrc--cloak-text (start end cloak)
+  "Cloak text between START and END and replace it with *.
+if CLOAK is nil cloaking property will be removed."
+  (if cloak
+      (put-text-property start end 'display (make-string (length (buffer-substring start end)) ?*))
+    (remove-text-properties start end '(display))))
+
+(add-hook 'envrc-mode-hook 'envrc-cloak-at-startup)
 
 ;;;###autoload
 (define-derived-mode envrc-file-mode
