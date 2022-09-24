@@ -401,7 +401,7 @@ in a temp buffer.  ARGS is as for ORIG."
     "layout" "load_prefix" "log_error" "log_status" "on_git_branch" "path_add"
     "path_rm" "rvm" "semver_search" "source_env" "source_env_if_exists"
     "source_up" "source_up_if_exists" "source_url" "strict_env" "unstrict_env"
-    "use" "user_rel_path" "watch_dir" "watch_file")
+    "use" "use_guix" "use_flake" "use_nix" "user_rel_path" "watch_dir" "watch_file")
   "Useful direnv keywords to be highlighted.")
 
 ;;;###autoload
