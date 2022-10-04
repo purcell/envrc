@@ -35,7 +35,7 @@
 
 
 (defun envrc-tests--exec (&rest args)
-  (should (apply 'call-process "direnv" nil nil nil args)))
+  (should (apply 'call-process envrc-direnv-executable nil nil nil args)))
 
 (defmacro envrc-tests--with-extra-global-env-var (key val &rest body)
   "Temporarily set var KEY to VAL in the global `process-environment', while BODY is evaluated."
@@ -79,7 +79,7 @@
 
 (ert-deftest envrc-direnv-is-available ()
   "Check the executable is executable!"
-  (should (executable-find "direnv")))
+  (should (executable-find envrc-direnv-executable)))
 
 (ert-deftest envrc-no-op-unless-allowed ()
   "When the .envrc isn't allowed, do nothing."
