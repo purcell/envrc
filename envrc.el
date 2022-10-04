@@ -353,7 +353,7 @@ ARGS is as for `call-process'."
   (interactive)
   (envrc--with-required-current-env env-dir
     (let* ((default-directory env-dir)
-           (exit-code (envrc--call-process-with-global-env' envrc-direnv-executable nil (get-buffer-create "*envrc-allow*") nil "allow")))
+           (exit-code (envrc--call-process-with-global-env envrc-direnv-executable nil (get-buffer-create "*envrc-allow*") nil "allow")))
       (if (zerop exit-code)
           (envrc--update-env env-dir)
         (display-buffer "*envrc-allow*")
@@ -364,7 +364,7 @@ ARGS is as for `call-process'."
   (interactive)
   (envrc--with-required-current-env env-dir
     (let* ((default-directory env-dir)
-           (exit-code (envrc--call-process-with-global-env' envrc-direnv-executable nil (get-buffer-create "*envrc-deny*") nil "deny")))
+           (exit-code (envrc--call-process-with-global-env envrc-direnv-executable nil (get-buffer-create "*envrc-deny*") nil "deny")))
       (if (zerop exit-code)
           (envrc--update-env env-dir)
         (display-buffer "*envrc-deny*")
