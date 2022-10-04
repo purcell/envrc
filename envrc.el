@@ -234,7 +234,7 @@ variable names and values."
     (unwind-protect
         (let ((default-directory env-dir))
           (with-temp-buffer
-            (let ((exit-code (envrc--call-process-with-global-env' envrc-direnv-executable nil (list t stderr-file) nil "export" "json")))
+            (let ((exit-code (envrc--call-process-with-global-env envrc-direnv-executable nil (list t stderr-file) nil "export" "json")))
               (envrc--debug "Direnv exited with %s and stderr=%S, stdout=%S"
                             exit-code
                             (with-temp-buffer
