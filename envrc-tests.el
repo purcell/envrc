@@ -64,7 +64,8 @@
              (setq ,passed t))
          (unless ,passed
            (message "Debug output: %s"
-                    (with-current-buffer "*envrc-debug*" (buffer-string))))))))
+                    (when (get-buffer "*envrc-debug*")
+                      (with-current-buffer "*envrc-debug*" (buffer-string)))))))))
 
 (ert-deftest envrc-no-op ()
   "When there's no .envrc, do nothing."
