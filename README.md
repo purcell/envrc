@@ -125,12 +125,8 @@ This approach also has some trade-offs:
   directories, whereas `envrc-mode` caches the environment until the
   user refreshes it explicitly with `envrc-reload`.
 
-I hope that these will be worthwhile, since my ultimate goal is to
-integrate with `lorri`, a daemon which re-builds Nix projects
-automatically and presents their environments to `direnv`: if we can
-hook into `lorri`'s rebuilds, then `envrc.el` will allow Emacs to
-programmatically refresh the environment of specific subsets of
-buffers, which is not currently possible with `direnv.el`.
+Overall this approach works well in practice, and feels cleaner than
+trying to strategically modify the global environment.
 
 It's also possible that there's a way to call `direnv` more
 aggressively by allowing it to see values of `DIRENV_*` obtained
