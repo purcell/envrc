@@ -285,7 +285,10 @@ also appear in PAIRS."
   (with-current-buffer buf
     (kill-local-variable 'exec-path)
     (kill-local-variable 'process-environment)
-    (kill-local-variable 'eshell-path-env)))
+    (when (derived-mode-p 'eshell-mode)
+      (if (fboundp 'eshell-set-path)
+          (eshell-set-path (butlast (exec-path)))
+        (kill-local-variable 'eshell-path-env)))))
 
 
 (defun envrc--apply (buf result)
@@ -301,7 +304,9 @@ also appear in PAIRS."
       (let ((path (getenv "PATH"))) ;; Get PATH from the merged environment: direnv may not have changed it
         (setq-local exec-path (parse-colon-path path))
         (when (derived-mode-p 'eshell-mode)
-          (setq-local eshell-path-env path))))))
+          (if (fboundp 'eshell-set-path)
+              (eshell-set-path path)
+            (setq-local eshell-path-env path)))))))
 
 (defun envrc--update-env (env-dir)
   "Refresh the state of the direnv in ENV-DIR and apply in all relevant buffers."
