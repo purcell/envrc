@@ -287,7 +287,7 @@ also appear in PAIRS."
     (kill-local-variable 'process-environment)
     (when (derived-mode-p 'eshell-mode)
       (if (fboundp 'eshell-set-path)
-          (eshell-set-path (butlast (exec-path)))
+          (eshell-set-path (butlast exec-path))
         (kill-local-variable 'eshell-path-env)))))
 
 
