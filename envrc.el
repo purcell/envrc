@@ -143,7 +143,8 @@ e.g. (define-key envrc-mode-map (kbd \"C-c e\") 'envrc-command-map)"
 ;;; Global state
 
 (defvar envrc--cache (make-hash-table :test 'equal :size 10)
-  "Known envrc directories and their direnv results, as produced by `envrc--export'.")
+  "Known envrc directorie and their direnv results.
+The values are as produced by `envrc--export'.")
 
 ;;; Local state
 
