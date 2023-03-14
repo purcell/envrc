@@ -79,6 +79,11 @@ Messages are written into the *envrc-debug* buffer."
   "The direnv executable used by envrc."
   :type 'string)
 
+(defcustom envrc-post-update-hook '()
+  "Hook run after updating the local environment."
+  :group 'envrc
+  :type 'hook)
+
 (define-obsolete-variable-alias 'envrc--lighter 'envrc-lighter "2021-05-17")
 
 (defcustom envrc-lighter '(:eval (envrc--lighter))
@@ -201,7 +206,8 @@ environments updated."
                                calculated))
                    (cached cached)))
              'none)))
-      (envrc--apply (current-buffer) result))))
+      (envrc--apply (current-buffer) result)
+      (run-hooks 'envrc-post-update-hook))))
 
 (defmacro envrc--at-end-of-special-buffer (name &rest body)
   "At the end of `special-mode' buffer NAME, execute BODY.
