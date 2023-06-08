@@ -424,6 +424,7 @@ in a temp buffer.  ARGS is as for ORIG."
   sh-mode "envrc"
   "Major mode for .envrc files as used by direnv.
 \\{envrc-file-mode-map}"
+  (sh-set-shell "bash")
   (font-lock-add-keywords
    nil `((,(regexp-opt envrc-file-extra-keywords 'symbols)
           (0 font-lock-keyword-face)))))
