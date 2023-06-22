@@ -256,7 +256,7 @@ variable names and values."
                 (message "Direnv failed in %s" env-dir)
                 (setq result 'error))
               (envrc--at-end-of-special-buffer "*envrc*"
-                (insert "==== " (format-time-string "%Y-%m-%d %H:%M:%S") " ==== " env-dir " ====\n\n")
+                (insert "──── " (format-time-string "%Y-%m-%d %H:%M:%S") " ──── " env-dir " ────\n\n")
                 (let ((initial-pos (point)))
                   (insert-file-contents (let (ansi-color-context)
                                           (ansi-color-apply stderr-file)))
@@ -439,5 +439,6 @@ in a temp buffer.  ARGS is as for ORIG."
 ;; LocalWords:  envrc direnv
 
 ;; Local Variables:
+;; coding: utf-8
 ;; indent-tabs-mode: nil
 ;; End:
