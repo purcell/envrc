@@ -356,7 +356,12 @@ ARGS is as for `call-process'."
   "Reload the current env."
   (interactive)
   (envrc--with-required-current-env env-dir
-    (envrc--update-env env-dir)))
+    (let* ((default-directory env-dir)
+           (exit-code (envrc--call-process-with-global-env envrc-direnv-executable nil (get-buffer-create "*envrc-allow*") nil "reload")))
+      (if (zerop exit-code)
+          (envrc--update-env env-dir)
+        (display-buffer "*envrc-reload*")
+        (user-error "Error running direnv reload")))))
 
 (defun envrc-allow ()
   "Run \"direnv allow\" in the current env."
