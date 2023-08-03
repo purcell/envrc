@@ -357,7 +357,7 @@ ARGS is as for `call-process'."
   (interactive)
   (envrc--with-required-current-env env-dir
     (let* ((default-directory env-dir)
-           (exit-code (envrc--call-process-with-global-env envrc-direnv-executable nil (get-buffer-create "*envrc-allow*") nil "reload")))
+           (exit-code (envrc--call-process-with-global-env envrc-direnv-executable nil (get-buffer-create "*envrc-reload*") nil "reload")))
       (if (zerop exit-code)
           (envrc--update-env env-dir)
         (display-buffer "*envrc-reload*")
