@@ -240,6 +240,41 @@
 ;;       (envrc-mode 1)
 ;;       (should (equal "BAR" (getenv "FOO"))))))
 
+(ert-deftest envrc-eshell-updates-environment-when-changing-directory ()
+  (let ((current-dir default-directory))
+    (eshell)
+    (envrc-tests--with-temp-directory envrc-dir
+      (with-temp-file ".envrc"
+        (insert "export FOO=BAR"))
+
+      (envrc-tests--exec "allow")
+
+      ;; envrc mode is not activated
+      (eshell/cd envrc-dir)
+      (should (equal nil (getenv "FOO")))
+
+      ;; envrc mode is activated with option set to not update env on directory change
+      (eshell/cd current-dir)
+      (let ((envrc-update-on-eshell-directory-change nil))
+        (envrc-mode 1))
+      (eshell/cd envrc-dir)
+      (should (equal nil (getenv "FOO")))
+
+      ;; envrc mode is activated and updates environment with default options
+      (eshell/cd current-dir)
+      (envrc-mode -1)
+      (envrc-mode 1)
+      (eshell/cd envrc-dir)
+      (should (equal "BAR" (getenv "FOO")))
+
+      ;; environment is cleared when exiting directory
+      (eshell/cd current-dir)
+      (should (equal nil (getenv "FOO")))
+
+      ;; environment is cleared when envrc-mode is disabled
+      (eshell/cd envrc-dir)
+      (envrc-mode -1)
+      (should (equal nil (getenv "FOO"))))))
 
 ;; TODO:
 ;; - Setting exec-path and eshell-path-env
