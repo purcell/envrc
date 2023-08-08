@@ -104,6 +104,7 @@ You can set this to nil to disable the lighter."
     (define-key map (kbd "a") 'envrc-allow)
     (define-key map (kbd "d") 'envrc-deny)
     (define-key map (kbd "r") 'envrc-reload)
+    (define-key map (kbd "l") 'envrc-show-log)
     map)
   "Keymap for commands in `envrc-mode'.
 See `envrc-mode-map' for how to assign a prefix binding to these."
@@ -395,6 +396,12 @@ This can be useful if a .envrc has been deleted."
     (with-current-buffer buf
       (envrc--update))))
 
+(defun envrc-show-log ()
+  "Open envrc log buffer."
+  (interactive)
+  (if-let ((buffer (get-buffer "*envrc*")))
+      (pop-to-buffer buffer)
+    (message "Envrc log buffer does not exist")))
 
 
 ;;; Propagate local environment to commands that use temp buffers
