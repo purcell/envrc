@@ -75,6 +75,10 @@
 Messages are written into the *envrc-debug* buffer."
   :type 'boolean)
 
+(defcustom envrc-update-on-eshell-directory-change t
+  "Whether envrc will update environment when changing directory in eshell."
+  :type 'boolean)
+
 (defcustom envrc-direnv-executable "direnv"
   "The direnv executable used by envrc."
   :type 'string)
@@ -123,8 +127,12 @@ e.g. (define-key envrc-mode-map (kbd \"C-c e\") 'envrc-command-map)"
   :lighter envrc-lighter
   :keymap envrc-mode-map
   (if envrc-mode
-      (envrc--update)
-    (envrc--clear (current-buffer))))
+      (progn
+        (envrc--update)
+        (when (and (derived-mode-p 'eshell-mode) envrc-update-on-eshell-directory-change)
+          (add-hook 'eshell-directory-change-hook #'envrc--update nil t)))
+    (envrc--clear (current-buffer))
+    (remove-hook 'eshell-directory-change-hook #'envrc--update t)))
 
 ;;;###autoload
 (define-globalized-minor-mode envrc-global-mode envrc-mode
