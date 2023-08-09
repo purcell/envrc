@@ -129,7 +129,7 @@ e.g. (define-key envrc-mode-map (kbd \"C-c e\") 'envrc-command-map)"
   (if envrc-mode
       (progn
         (envrc--update)
-        (when (and (equal major-mode 'eshell-mode) envrc-update-on-eshell-directory-change)
+        (when (and (derived-mode-p 'eshell-mode) envrc-update-on-eshell-directory-change)
           (add-hook 'eshell-directory-change-hook #'envrc--update nil t)))
     (envrc--clear (current-buffer))
     (remove-hook 'eshell-directory-change-hook #'envrc--update t)))
