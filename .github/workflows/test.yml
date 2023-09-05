@@ -28,7 +28,7 @@ jobs:
       with:
         version: ${{ matrix.emacs_version }}
 
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Install deps for tests
       run: nix-env -i direnv -f '<nixpkgs>'
     - name: Run tests
