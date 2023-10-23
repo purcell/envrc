@@ -442,6 +442,8 @@ in a temp buffer.  ARGS is as for ORIG."
     "use" "use_guix" "use_flake" "use_nix" "user_rel_path" "watch_dir" "watch_file")
   "Useful direnv keywords to be highlighted.")
 
+(declare-function sh-set-shell "sh-script")
+
 ;;;###autoload
 (define-derived-mode envrc-file-mode
   sh-mode "envrc"
