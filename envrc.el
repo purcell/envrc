@@ -5,7 +5,7 @@
 ;; Author: Steve Purcell <steve@sanityinc.com>
 ;; Keywords: processes, tools
 ;; Homepage: https://github.com/purcell/envrc
-;; Package-Requires: ((seq "2") (emacs "25.1") (inheritenv "0.1"))
+;; Package-Requires: ((seq "2") (emacs "25.1") (inheritenv "0.1") (dash "2.12.0"))
 ;; Package-Version: 0.6
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -63,6 +63,7 @@
 (require 'ansi-color)
 (require 'cl-lib)
 (require 'inheritenv)
+(require 'dash)
 
 ;;; Custom vars and minor modes
 
@@ -77,6 +78,20 @@ Messages are written into the *envrc-debug* buffer."
 
 (defcustom envrc-update-on-eshell-directory-change t
   "Whether envrc will update environment when changing directory in eshell."
+  :type 'boolean)
+
+(defcustom envrc-show-path-in-summary t
+  "Whether to show directory paths in the summary message."
+  :group 'envrc
+  :type 'boolean)
+
+(defcustom envrc-use-faces-in-summary t
+  "Whether to use custom font faces in the summary message.
+
+When enabled, the summary message uses custom font faces strings
+for added, changed, and removed environment variables, which
+usually results in coloured output."
+  :group 'envrc
   :type 'boolean)
 
 (defcustom envrc-direnv-executable "direnv"
@@ -232,6 +247,44 @@ MSG and ARGS are as for that function."
       (insert (apply 'format msg args))
       (newline))))
 
+(defun envrc--summarise-changes (items)
+  "Create a summary string for ITEMS."
+  (string-join
+   (--map
+    (let* ((name (car it))
+           (state (cdr it))
+           (face)
+           (prefix))
+      (pcase state
+        (`added   (setq prefix "+" face 'diff-added))
+        (`changed (setq prefix "~" face 'diff-changed))
+        (`removed (setq prefix "-" face 'diff-removed)))
+      (propertize (concat prefix name) 'face face))
+    (--sort
+     (string-lessp (symbol-name (cdr it)) (symbol-name (cdr other)))
+     (--map
+      (cons (car it)
+            (if (cdr it) (if (getenv (car it)) 'changed 'added) 'removed))
+      (--sort
+       (string-lessp (car it) (car other))
+       (--remove (string-prefix-p "DIRENV_" (car it)) items)))))
+   " "))
+
+(defun envrc--show-summary (summary directory)
+  "Show a SUMMARY message.
+
+DIRECTORY is the directory where the environment changes."
+  (let ((summary
+         (if (string-empty-p summary) "no changes" summary))
+        (paths
+         (when envrc-show-path-in-summary
+           (abbreviate-file-name (directory-file-name directory)))))
+    (unless envrc-use-faces-in-summary
+      (setq summary (substring-no-properties summary)))
+    (if paths
+        (message "direnv: %s (%s)" summary paths)
+      (message "direnv: %s" summary))))
+
 (defun envrc--export (env-dir)
   "Export the env vars for ENV-DIR using direnv.
 Return value is either \\='error, \\='none, or an alist of environment
@@ -257,11 +310,12 @@ variable names and values."
                             (buffer-string))
               (if (zerop exit-code)
                   (progn
-                    (message "Direnv succeeded in %s" env-dir)
                     (if (zerop (buffer-size))
                         (setq result 'none)
                       (goto-char (point-min))
-                      (setq result (let ((json-key-type 'string)) (json-read-object)))))
+                      (prog1
+                          (setq result (let ((json-key-type 'string)) (json-read-object)))
+                        (envrc--show-summary (envrc--summarise-changes result) env-dir))))
                 (message "Direnv failed in %s" env-dir)
                 (setq result 'error))
               (envrc--at-end-of-special-buffer "*envrc*"
