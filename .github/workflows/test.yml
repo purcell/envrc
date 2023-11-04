@@ -43,4 +43,4 @@ jobs:
     - name: Install deps for tests
       run: nix-env -i direnv -f '<nixpkgs>'
     - name: Run tests
-      run: make compile
+      run: make compile test
