@@ -45,7 +45,6 @@
 ;;; Code:
 
 ;; TODO: special handling for DIRENV_* vars? exclude them? use them to safely reload more aggressively?
-;; TODO: special handling for remote files
 ;; TODO: handle nil default-directory (rarely happens, but is possible)
 ;; TODO: limit size of *direnv* buffer
 ;; TODO: special handling of compilation-environment?
@@ -63,6 +62,7 @@
 (require 'ansi-color)
 (require 'cl-lib)
 (require 'inheritenv)
+(eval-when-compile (require 'tramp))
 
 ;;; Custom vars and minor modes
 
@@ -121,6 +121,14 @@ To access `envrc-command-map' from this map, give it a prefix keybinding,
 e.g. (define-key envrc-mode-map (kbd \"C-c e\") 'envrc-command-map)"
   :type 'keymap)
 
+(defcustom envrc-remote nil
+  "Whether or not to enable direnv over TRAMP."
+  :type 'boolean)
+
+(defcustom envrc-supported-tramp-methods '("ssh")
+  "Tramp connection methods that are supported by envrc."
+  :type '(repeat string))
+
 ;;;###autoload
 (define-minor-mode envrc-mode
   "A local minor mode in which env vars are set by direnv."
@@ -137,8 +145,17 @@ e.g. (define-key envrc-mode-map (kbd \"C-c e\") 'envrc-command-map)"
 
 ;;;###autoload
 (define-globalized-minor-mode envrc-global-mode envrc-mode
-  (lambda () (unless (or (minibufferp) (file-remote-p default-directory))
-               (envrc-mode 1))))
+  (lambda ()
+    (when
+        (cond
+         ((minibufferp) nil)
+         ((file-remote-p default-directory)
+          (and envrc-remote
+               (seq-contains-p
+                envrc-supported-tramp-methods
+                (with-parsed-tramp-file-name default-directory vec vec-method))))
+         (t t))
+      (envrc-mode 1))))
 
 (defface envrc-mode-line-on-face '((t :inherit success))
   "Face used in mode line to indicate that direnv is in effect.")
@@ -152,7 +169,7 @@ e.g. (define-key envrc-mode-map (kbd \"C-c e\") 'envrc-command-map)"
 ;;; Global state
 
 (defvar envrc--cache (make-hash-table :test 'equal :size 10)
-  "Known envrc directorie and their direnv results.
+  "Known envrc directories and their direnv results.
 The values are as produced by `envrc--export'.")
 
 ;;; Local state
@@ -160,6 +177,11 @@ The values are as produced by `envrc--export'.")
 (defvar-local envrc--status 'none
   "Symbol indicating state of the current buffer's direnv.
 One of '(none on error).")
+
+(defvar-local envrc--remote-path nil
+  "Buffer local variable for remote path.
+If set, this will override `tramp-remote-path' via connection
+local variables.")
 
 ;;; Internals
 
@@ -315,15 +337,28 @@ also appear in PAIRS."
           (envrc--clear buf)
           (envrc--debug "[%s] reset environment to default" buf))
       (envrc--debug "[%s] applied merged environment" buf)
-      (setq-local process-environment (envrc--merged-environment (default-value 'process-environment) result))
-      (let ((path (getenv "PATH"))) ;; Get PATH from the merged environment: direnv may not have changed it
-        (setq-local exec-path (parse-colon-path path))
+      (let* ((remote (when-let ((fn (buffer-file-name buf)))
+                       (file-remote-p fn)))
+             (env (envrc--merged-environment
+                   (default-value (if remote
+                                      'tramp-remote-process-environment
+                                    'process-environment))
+                   result))
+             (path (getenv-internal "PATH" env))
+             (parsed-path (parse-colon-path path)))
+        (if remote
+            (setq-local tramp-remote-process-environment env)
+          (setq-local process-environment env))
+        ;; Get PATH from the merged environment: direnv may not have changed it
+        (if remote
+            (setq-local envrc--remote-path parsed-path)
+          (setq-local exec-path parsed-path))
         (when (derived-mode-p 'eshell-mode)
           (if (fboundp 'eshell-set-path)
               (eshell-set-path path)
-            (setq-local eshell-path-env path))))
-      (when-let ((info-path (getenv "INFOPATH")))
-        (setq-local Info-directory-list (parse-colon-path info-path))))))
+            (setq-local eshell-path-env path)))
+        (when-let ((info-path (getenv-internal "INFOPATH" env)))
+          (setq-local Info-directory-list (parse-colon-path info-path)))))))
 
 (defun envrc--update-env (env-dir)
   "Refresh the state of the direnv in ENV-DIR and apply in all relevant buffers."
@@ -362,7 +397,7 @@ In particular, we ensure the default variable `exec-path' and
 ARGS is as for `call-process'."
   (let ((exec-path (default-value 'exec-path))
         (process-environment (default-value 'process-environment)))
-    (apply 'call-process args)))
+    (apply 'process-file args)))
 
 (defun envrc-reload ()
   "Reload the current env."
@@ -425,9 +460,29 @@ in a temp buffer.  ARGS is as for ORIG."
       (inheritenv (apply orig args))
     (apply orig args)))
 
+(defun envrc-propagate-tramp-environment (buf)
+  "Advice function to propagate `tramp-remote-path' and
+`tramp-remote-process-environment' from buffer local values."
+  (when envrc-mode
+    (let ((cur-path envrc--remote-path)
+          (cur-env tramp-remote-process-environment))
+      (with-current-buffer buf
+        (setq-local tramp-remote-process-environment cur-env)
+        (setq-local envrc--remote-path cur-path))))
+  buf)
+
+(defun envrc-get-remote-path (fn vec)
+  "Advice function to wrap `tramp-get-remote-path'. Shortcuts tramp
+caching direnv sets the exec-path."
+  (with-current-buffer (tramp-get-connection-buffer vec)
+    (or envrc--remote-path
+        (apply fn vec nil))))
+
 (advice-add 'shell-command-to-string :around #'envrc-propagate-environment)
 (advice-add 'async-shell-command :around #'envrc-propagate-environment)
 (advice-add 'org-babel-eval :around #'envrc-propagate-environment)
+(advice-add 'tramp-get-connection-buffer :filter-return #'envrc-propagate-tramp-environment)
+(advice-add 'tramp-get-remote-path :around #'envrc-get-remote-path)
 
 
 ;;; Major mode for .envrc files
