@@ -14,10 +14,17 @@ the environment variables specified in those files. This allows
 different versions of linters and other tools to be used in each
 project if desired.
 
-This library is like [the `direnv.el`
-package](https://github.com/wbolster/emacs-direnv), but sets all
-environment variables buffer-locally, while `direnv.el` changes
-the global set of environment variables after each command.
+## How does this differ from `direnv.el`?
+
+[`direnv.el`](https://github.com/wbolster/emacs-direnv) repeatedly
+changes the global Emacs environment, based on tracking what buffer
+you're working on.
+
+Instead, `envrc.el` simply sets and stores the right environment in
+each buffer, as a buffer-local variable.
+
+From a user perspective, both are well tested and typically work fine,
+but the `envrc.el` approach feels cleaner to me.
 
 ## Installation
 
