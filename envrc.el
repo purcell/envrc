@@ -255,7 +255,7 @@ variable names and values."
                               (insert-file-contents stderr-file)
                               (buffer-string))
                             (buffer-string))
-              (if (eq 0 exit-code)
+              (if (zerop exit-code)
                   (progn
                     (message "Direnv succeeded in %s" env-dir)
                     (if (zerop (buffer-size))
