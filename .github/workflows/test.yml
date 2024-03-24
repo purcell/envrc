@@ -40,6 +40,6 @@ jobs:
 
     - uses: actions/checkout@v4
     - name: Install deps for tests
-      run: nix-env -i direnv -f '<nixpkgs>'
+      run: nix profile install 'nixpkgs#direnv'
     - name: Run tests
       run: make compile test
