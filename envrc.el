@@ -118,7 +118,7 @@ See `envrc-mode-map' for how to assign a prefix binding to these."
 (defcustom envrc-mode-map (make-sparse-keymap)
   "Keymap for `envrc-mode'.
 To access `envrc-command-map' from this map, give it a prefix keybinding,
-e.g. (define-key envrc-mode-map (kbd \"C-c e\") 'envrc-command-map)"
+e.g. (define-key envrc-mode-map (kbd \"C-c e\") \\='envrc-command-map)"
   :type 'keymap)
 
 ;;;###autoload
@@ -159,7 +159,7 @@ The values are as produced by `envrc--export'.")
 
 (defvar-local envrc--status 'none
   "Symbol indicating state of the current buffer's direnv.
-One of '(none on error).")
+One of \\='(none on error).")
 
 ;;; Internals
 
@@ -234,7 +234,7 @@ MSG and ARGS are as for that function."
 
 (defun envrc--export (env-dir)
   "Export the env vars for ENV-DIR using direnv.
-Return value is either 'error, 'none, or an alist of environment
+Return value is either \\='error, \\='none, or an alist of environment
 variable names and values."
   (unless (envrc--env-dir-p env-dir)
     (error "%s is not a directory with a .envrc" env-dir))
