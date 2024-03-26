@@ -322,7 +322,7 @@ also appear in PAIRS."
           (if (fboundp 'eshell-set-path)
               (eshell-set-path path)
             (setq-local eshell-path-env path))))
-      ;; tell info.el to parse INFOPATH again in case direnv modified it
+      ;; Force info.el to parse INFOPATH again in case direnv modified it
       (when (getenv "INFOPATH") (setq-local Info-directory-list nil)))))
 
 (defun envrc--update-env (env-dir)
