@@ -322,8 +322,8 @@ also appear in PAIRS."
           (if (fboundp 'eshell-set-path)
               (eshell-set-path path)
             (setq-local eshell-path-env path))))
-      (when-let ((info-path (getenv "INFOPATH")))
-        (setq-local Info-directory-list (parse-colon-path info-path))))))
+      ;; Force info.el to parse INFOPATH again in case direnv modified it
+      (when (getenv "INFOPATH") (setq-local Info-directory-list nil)))))
 
 (defun envrc--update-env (env-dir)
   "Refresh the state of the direnv in ENV-DIR and apply in all relevant buffers."
