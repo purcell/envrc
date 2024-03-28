@@ -130,7 +130,7 @@ e.g. (define-key envrc-mode-map (kbd \"C-c e\") \\='envrc-command-map)"
   "Whether or not to enable direnv over TRAMP."
   :type 'boolean)
 
-(defcustom envrc-supported-tramp-methods '("ssh")
+(defcustom envrc-supported-tramp-methods '("ssh" "sshx")
   "Tramp connection methods that are supported by envrc."
   :type '(repeat string))
 
