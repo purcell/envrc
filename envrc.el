@@ -63,6 +63,7 @@
 (require 'ansi-color)
 (require 'cl-lib)
 (require 'inheritenv)
+(require 'dash)
 
 ;;; Custom vars and minor modes
 
@@ -77,6 +78,11 @@ Messages are written into the *envrc-debug* buffer."
 
 (defcustom envrc-update-on-eshell-directory-change t
   "Whether envrc will update environment when changing directory in eshell."
+  :type 'boolean)
+
+(defcustom envrc-show-summary-in-minibuffer t
+  "When non-nil, show a summary of the changes made by direnv in the minibuffer."
+  :group 'envrc
   :type 'boolean)
 
 (defcustom envrc-direnv-executable "direnv"
@@ -232,6 +238,32 @@ MSG and ARGS are as for that function."
       (insert (apply 'format msg args))
       (newline))))
 
+(defun envrc--summarise-changes (items)
+  "Create a summary string for ITEMS."
+  (if items
+      (cl-loop for (name . val) in items
+               if (not (string-prefix-p "DIRENV_" name))
+               collect (cons name
+                             (if val
+                                 (if (let ((process-environment (default-value 'process-environment)))
+                                       (getenv name))
+                                     '("~" 'diff-changed)
+                                   '("+" 'diff-added))
+                               '("-" 'diff-removed)))
+               into entries
+               finally return (cl-loop for (name prefix face) in (seq-sort-by 'car 'string< entries)
+                                       collect (propertize (concat prefix name) 'face face) into strings
+                                       finally return (string-join strings " ")))
+    "no changes"))
+
+(defun envrc--show-summary (result directory)
+  "Summarise successful RESULT in the minibuffer.
+DIRECTORY is the directory in which the environment changes."
+  (message "direnv: %s %s"
+           (envrc--summarise-changes result)
+           (propertize (concat "(" (abbreviate-file-name (directory-file-name directory)) ")")
+                       'face 'font-lock-comment-face)))
+
 (defun envrc--export (env-dir)
   "Export the env vars for ENV-DIR using direnv.
 Return value is either \\='error, \\='none, or an alist of environment
@@ -257,11 +289,13 @@ variable names and values."
                             (buffer-string))
               (if (zerop exit-code)
                   (progn
-                    (message "Direnv succeeded in %s" env-dir)
                     (if (zerop (buffer-size))
                         (setq result 'none)
                       (goto-char (point-min))
-                      (setq result (let ((json-key-type 'string)) (json-read-object)))))
+                      (prog1
+                          (setq result (let ((json-key-type 'string)) (json-read-object)))
+                        (when envrc-show-summary-in-minibuffer
+                          (envrc--show-summary result env-dir)))))
                 (message "Direnv failed in %s" env-dir)
                 (setq result 'error))
               (envrc--at-end-of-special-buffer "*envrc*"
