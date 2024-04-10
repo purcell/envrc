@@ -63,7 +63,6 @@
 (require 'ansi-color)
 (require 'cl-lib)
 (require 'inheritenv)
-(require 'dash)
 
 ;;; Custom vars and minor modes
 
