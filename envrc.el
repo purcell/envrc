@@ -286,7 +286,7 @@ variable names and values."
                               (insert-file-contents stderr-file)
                               (buffer-string))
                             (buffer-string))
-              (if (zerop exit-code)
+              (if (eq 0 exit-code) ;; zerop is not an option, as exit-code may sometimes be a symbol
                   (progn
                     (if (zerop (buffer-size))
                         (setq result 'none)
