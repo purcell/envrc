@@ -50,9 +50,9 @@ executables. Counter-intuitively, this means that `envrc-global-mode`
 should be enabled *after* other global minor modes, since each
 _prepends_ itself to various hooks.
 
-You should only enable the mode if `direnv` is installed and available
-in the default Emacs `exec-path`. (There is a local minor mode
-`envrc-mode`, but you should not try to enable this granularly,
+The global mode will only have an effect if `direnv` is installed and
+available in the default Emacs `exec-path`. (There is a local minor
+mode `envrc-mode`, but you should not try to enable this granularly,
 e.g. for certain modes or projects, because compilation and other
 buffers might not get set up with the right environment.)
 

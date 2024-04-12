@@ -142,7 +142,8 @@ e.g. (define-key envrc-mode-map (kbd \"C-c e\") \\='envrc-command-map)"
 
 ;;;###autoload
 (define-globalized-minor-mode envrc-global-mode envrc-mode
-  (lambda () (unless (or (minibufferp) (file-remote-p default-directory))
+  (lambda () (when (and (not (minibufferp)) (not (file-remote-p default-directory))
+                        (executable-find "direnv"))
                (envrc-mode 1))))
 
 (defface envrc-mode-line-on-face '((t :inherit success))
