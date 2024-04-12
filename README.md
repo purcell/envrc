@@ -37,14 +37,23 @@ the latest release or clone the repository, and install
 
 ## Usage
 
-Add the following to your `init.el` (after calling `package-initialize`):
+Add a snippet like the following at the **bottom of your `init.el`**:
 
 ```el
 (envrc-global-mode)
 ```
+or
+```el
+(add-hook 'after-init-hook 'envrc-global-mode)
+```
+or, if you're a `use-package` fan:
+```el
+(use-package envrc
+  :hook (after-init . envrc-global-mode))
+```
 
-It's probably wise to do this *late in your startup sequence*: you
-normally want `envrc-mode` to be initialized in each buffer *before*
+Why must you enable the global mode *late in your startup sequence* like this? 
+You normally want `envrc-mode` to be initialized in each buffer *before*
 other minor modes like `flycheck-mode` which might look for
 executables. Counter-intuitively, this means that `envrc-global-mode`
 should be enabled *after* other global minor modes, since each
