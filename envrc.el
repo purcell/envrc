@@ -117,14 +117,14 @@ You can set this to nil to disable the lighter."
     map)
   "Keymap for commands in `envrc-mode'.
 See `envrc-mode-map' for how to assign a prefix binding to these."
-  :type 'keymap)
+  :type '(restricted-sexp :match-alternatives (keymapp)))
 (fset 'envrc-command-map envrc-command-map)
 
 (defcustom envrc-mode-map (make-sparse-keymap)
   "Keymap for `envrc-mode'.
 To access `envrc-command-map' from this map, give it a prefix keybinding,
 e.g. (define-key envrc-mode-map (kbd \"C-c e\") \\='envrc-command-map)"
-  :type 'keymap)
+  :type '(restricted-sexp :match-alternatives (keymapp)))
 
 ;;;###autoload
 (define-minor-mode envrc-mode
