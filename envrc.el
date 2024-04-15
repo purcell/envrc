@@ -247,9 +247,9 @@ MSG and ARGS are as for that function."
                              (if val
                                  (if (let ((process-environment (default-value 'process-environment)))
                                        (getenv name))
-                                     '("~" 'diff-changed)
-                                   '("+" 'diff-added))
-                               '("-" 'diff-removed)))
+                                     '("~" diff-changed)
+                                   '("+" diff-added))
+                               '("-" diff-removed)))
                into entries
                finally return (cl-loop for (name prefix face) in (seq-sort-by 'car 'string< entries)
                                        collect (propertize (concat prefix name) 'face face) into strings
