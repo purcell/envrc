@@ -5,7 +5,7 @@
 ;; Author: Steve Purcell <steve@sanityinc.com>
 ;; Keywords: processes, tools
 ;; Homepage: https://github.com/purcell/envrc
-;; Package-Requires: ((seq "2") (emacs "25.1") (inheritenv "0.1"))
+;; Package-Requires: ((emacs "26.1") (inheritenv "0.1"))
 ;; Package-Version: 0.10
 
 ;; This program is free software; you can redistribute it and/or modify

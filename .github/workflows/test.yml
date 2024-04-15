@@ -10,7 +10,7 @@ jobs:
     steps:
     - uses: purcell/setup-emacs@master
       with:
-        version: 29.1
+        version: 29.3
     - uses: actions/checkout@v4
     - name: Run tests
       run: make package-lint
@@ -20,8 +20,6 @@ jobs:
     strategy:
       matrix:
         emacs_version:
-          - 25.1
-          - 25.3
           - 26.1
           - 26.3
           - 27.2
