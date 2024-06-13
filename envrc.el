@@ -6,7 +6,7 @@
 ;; Keywords: processes, tools
 ;; Homepage: https://github.com/purcell/envrc
 ;; Package-Requires: ((emacs "26.1") (inheritenv "0.1"))
-;; Package-Version: 0.11
+;; Package-Version: 0.12
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
