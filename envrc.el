@@ -144,7 +144,7 @@ e.g. (define-key envrc-mode-map (kbd \"C-c e\") \\='envrc-command-map)"
 
 ;;;###autoload
 (define-globalized-minor-mode envrc-global-mode envrc-mode
-  (lambda () (when (and (not (minibufferp)) (not (file-remote-p default-directory))
+  (lambda () (when (and (not (file-remote-p default-directory))
                         (executable-find envrc-direnv-executable))
                (envrc-mode 1))))
 
@@ -475,6 +475,10 @@ in a temp buffer.  ARGS is as for ORIG."
 (advice-add 'shell-command-to-string :around #'envrc-propagate-environment)
 (advice-add 'async-shell-command :around #'envrc-propagate-environment)
 (advice-add 'org-babel-eval :around #'envrc-propagate-environment)
+
+;; NOTE: since this function is meant to be invoked by `completing-read',
+;; `envrc-mode' must be enabled in the minibuffer.
+(advice-add 'Man-completion-table :around #'envrc-propagate-environment)
 
 
 ;;; Major mode for .envrc files
