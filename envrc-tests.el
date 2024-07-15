@@ -239,6 +239,7 @@
 ;;     (with-temp-buffer
 ;;       (envrc-mode 1)
 ;;       (should (equal "BAR" (getenv "FOO"))))))
+(require 'eshell)
 
 (ert-deftest envrc-eshell-updates-environment-when-changing-directory ()
   (let ((current-dir default-directory))
