@@ -59,6 +59,7 @@
 
 (require 'seq)
 (require 'json)
+(require 'woman)
 (require 'subr-x)
 (require 'ansi-color)
 (require 'cl-lib)
@@ -143,7 +144,7 @@ e.g. (define-key envrc-mode-map (kbd \"C-c e\") \\='envrc-command-map)"
 
 ;;;###autoload
 (define-globalized-minor-mode envrc-global-mode envrc-mode
-  (lambda () (when (and (not (minibufferp)) (not (file-remote-p default-directory))
+  (lambda () (when (and (not (file-remote-p default-directory))
                         (executable-find envrc-direnv-executable))
                (envrc-mode 1))))
 
@@ -340,7 +341,6 @@ also appear in PAIRS."
           (eshell-set-path (butlast exec-path))
         (kill-local-variable 'eshell-path-env)))))
 
-
 (defun envrc--apply (buf result)
   "Update BUF with RESULT, which is a result of `envrc--export'."
   (with-current-buffer buf
@@ -358,7 +358,19 @@ also appear in PAIRS."
               (eshell-set-path path)
             (setq-local eshell-path-env path))))
       ;; Force info.el to parse INFOPATH again in case direnv modified it
-      (when (getenv "INFOPATH") (setq-local Info-directory-list nil)))))
+      (when (getenv "INFOPATH") (setq-local Info-directory-list nil))
+      ;; Flush woman.el cache
+      ;; TODO: fix for `man' which makes use of `with-temp-buffer' in completing
+      ;; read. Seems that `envrc-propagate-environment' has problems with
+      ;; `envrc-mode' not being enabled in interactive invocations.
+      (when-let ((manpath (getenv "MANPATH")))
+        (setq-local woman-cache-filename nil) ; Do not cache
+        (setq-local woman-manpath (parse-colon-path manpath)
+                    woman-expanded-directory-path nil)
+        (setq-local woman-expanded-directory-path
+	          (woman-expand-directory-path woman-manpath woman-path))
+        (setq-local woman-topic-all-completions
+	          (woman-topic-all-completions woman-expanded-directory-path))))))
 
 (defun envrc--update-env (env-dir)
   "Refresh the state of the direnv in ENV-DIR and apply in all relevant buffers."
@@ -463,6 +475,10 @@ in a temp buffer.  ARGS is as for ORIG."
 (advice-add 'shell-command-to-string :around #'envrc-propagate-environment)
 (advice-add 'async-shell-command :around #'envrc-propagate-environment)
 (advice-add 'org-babel-eval :around #'envrc-propagate-environment)
+
+;; NOTE: since this function is meant to be invoked by `completing-read',
+;; `envrc-mode' must be enabled in the minibuffer.
+(advice-add 'Man-completion-table :around #'envrc-propagate-environment)
 
 
 ;;; Major mode for .envrc files
