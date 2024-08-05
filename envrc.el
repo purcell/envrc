@@ -91,21 +91,41 @@ Messages are written into the *envrc-debug* buffer."
 
 (define-obsolete-variable-alias 'envrc--lighter 'envrc-lighter "2021-05-17")
 
-(defcustom envrc-lighter '(:eval (envrc--lighter))
+(defcustom envrc-lighter-function #'envrc-standard-lighter
+  "A function that returns a mode-line lighter for the provided status.
+The status is one of the symbols on, error, or none). This variable may also be
+set to nil, which disables the lighter."
+  :type '(choice (const :tag "Disable lighter" nil) function))
+(put 'envrc-lighter-function 'risky-local-variable t)
+
+(defcustom envrc-lighter
+  '(:eval (unless (null envrc-lighter-function)
+            (funcall envrc-lighter-function envrc--status)))
   "The mode line lighter for `envrc-mode'.
 You can set this to nil to disable the lighter."
   :type 'sexp)
 (put 'envrc-lighter 'risky-local-variable t)
 
-(defcustom envrc-none-lighter '(" envrc[" (:propertize "none" face envrc-mode-line-none-face) "]")
+(defun envrc--default-lighter (status)
+  "Return a lighter for envrc depending on the provided STATUS."
+  `( " envrc["
+     (:propertize ,(format "%s" status)
+                  face
+                  ,(pcase status
+                     ('on 'envrc-mode-line-on-face)
+                     ('error 'envrc-mode-line-error-face)
+                     (_ 'envrc-mode-line-none-face)))
+     "]"))
+
+(defcustom envrc-none-lighter (envrc--default-lighter 'none)
   "Lighter spec used by the default `envrc-lighter' when envrc is inactive."
   :type 'sexp)
 
-(defcustom envrc-on-lighter '(" envrc[" (:propertize "on" face envrc-mode-line-on-face) "]")
+(defcustom envrc-on-lighter (envrc--default-lighter 'on)
   "Lighter spec used by the default `envrc-lighter' when envrc is on."
   :type 'sexp)
 
-(defcustom envrc-error-lighter '(" envrc[" (:propertize "error" face envrc-mode-line-error-face) "]")
+(defcustom envrc-error-lighter (envrc--default-lighter 'error)
   "Lighter spec used by the default `envrc-lighter' when envrc has errored."
   :type 'sexp)
 
@@ -191,12 +211,14 @@ local variables.")
 
 ;;; Internals
 
-(defun envrc--lighter ()
-  "Return a colourised version of `envrc--status' for use in the mode line."
-  (pcase envrc--status
-    (`on envrc-on-lighter)
-    (`error envrc-error-lighter)
-    (`none envrc-none-lighter)))
+(defun envrc-standard-lighter (status)
+  "Return a lighter for envrc depending on the provided STATUS."
+  ;; TODO: When ‘envrc-STATUS-lighter’ are removed, this can just be replaced
+  ;;       with the body of ‘envrc--default-lighter’.
+  (pcase status
+    ('on envrc-on-lighter)
+    ('error envrc-error-lighter)
+    (_ envrc-none-lighter)))
 
 (defun envrc--env-dir-p (dir)
   "Return non-nil if DIR contains a config file for direnv."
