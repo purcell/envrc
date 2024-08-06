@@ -99,7 +99,7 @@ set to nil, which disables the lighter."
 (put 'envrc-lighter-function 'risky-local-variable t)
 
 (defcustom envrc-lighter
-  '(:eval (unless (null envrc-lighter-function)
+  '(:eval (when envrc-lighter-function
             (funcall envrc-lighter-function envrc--status)))
   "The mode line lighter for `envrc-mode'.
 You can set this to nil to disable the lighter."
