@@ -89,25 +89,21 @@ Messages are written into the *envrc-debug* buffer."
   "The direnv executable used by envrc."
   :type 'string)
 
-(define-obsolete-variable-alias 'envrc--lighter 'envrc-lighter "2021-05-17")
+(make-obsolete-variable 'envrc-lighter 'envrc-lighter-function "2024-08-06")
+(make-obsolete-variable 'envrc-none-lighter
+                        'envrc-lighter-function
+                        "2024-08-06")
+(make-obsolete-variable 'envrc-on-lighter 'envrc-lighter-function "2024-08-06")
+(make-obsolete-variable 'envrc-error-lighter
+                        'envrc-lighter-function
+                        "2024-08-06")
 
-(defcustom envrc-lighter '(:eval (envrc--lighter))
-  "The mode line lighter for `envrc-mode'.
-You can set this to nil to disable the lighter."
-  :type 'sexp)
-(put 'envrc-lighter 'risky-local-variable t)
-
-(defcustom envrc-none-lighter '(" envrc[" (:propertize "none" face envrc-mode-line-none-face) "]")
-  "Lighter spec used by the default `envrc-lighter' when envrc is inactive."
-  :type 'sexp)
-
-(defcustom envrc-on-lighter '(" envrc[" (:propertize "on" face envrc-mode-line-on-face) "]")
-  "Lighter spec used by the default `envrc-lighter' when envrc is on."
-  :type 'sexp)
-
-(defcustom envrc-error-lighter '(" envrc[" (:propertize "error" face envrc-mode-line-error-face) "]")
-  "Lighter spec used by the default `envrc-lighter' when envrc has errored."
-  :type 'sexp)
+(defcustom envrc-lighter-function #'envrc-standard-lighter
+  "A function that returns a mode-line lighter for the provided status.
+The status is one of the symbols on, error, or none). This variable may also be
+set to nil, which disables the lighter."
+  :type '(choice (const :tag "Disable lighter" nil) function))
+(put 'envrc-lighter-function 'risky-local-variable t)
 
 (defcustom envrc-command-map
   (let ((map (make-sparse-keymap)))
@@ -131,7 +127,7 @@ e.g. (define-key envrc-mode-map (kbd \"C-c e\") \\='envrc-command-map)"
 (define-minor-mode envrc-mode
   "A local minor mode in which env vars are set by direnv."
   :init-value nil
-  :lighter envrc-lighter
+  :lighter envrc--lighter
   :keymap envrc-mode-map
   (if envrc-mode
       (progn
@@ -143,9 +139,11 @@ e.g. (define-key envrc-mode-map (kbd \"C-c e\") \\='envrc-command-map)"
 
 ;;;###autoload
 (define-globalized-minor-mode envrc-global-mode envrc-mode
-  (lambda () (when (and (not (minibufferp)) (not (file-remote-p default-directory))
-                        (executable-find envrc-direnv-executable))
-               (envrc-mode 1))))
+  (lambda ()
+    (when (and (not (minibufferp))
+               (not (file-remote-p default-directory))
+               (executable-find envrc-direnv-executable))
+      (envrc-mode 1))))
 
 (defface envrc-mode-line-on-face '((t :inherit success))
   "Face used in mode line to indicate that direnv is in effect.")
@@ -168,14 +166,24 @@ The values are as produced by `envrc--export'.")
   "Symbol indicating state of the current buffer's direnv.
 One of \\='(none on error).")
 
-;;; Internals
+(defvar envrc--lighter
+  '(:eval (when envrc-lighter-function
+            (funcall envrc-lighter-function envrc--status)))
+  "The mode line lighter for `envrc-mode'.
+This is updated based on ‘envrc-lighter-function’.")
 
-(defun envrc--lighter ()
-  "Return a colourised version of `envrc--status' for use in the mode line."
-  (pcase envrc--status
-    (`on envrc-on-lighter)
-    (`error envrc-error-lighter)
-    (`none envrc-none-lighter)))
+(defun envrc-standard-lighter (status)
+  "Return a lighter for envrc depending on the provided STATUS."
+  `( " envrc["
+     (:propertize ,(format "%s" status)
+                  face
+                  ,(pcase status
+                     ('on 'envrc-mode-line-on-face)
+                     ('error 'envrc-mode-line-error-face)
+                     (_ 'envrc-mode-line-none-face)))
+     "]"))
+
+;;; Internals
 
 (defun envrc--env-dir-p (dir)
   "Return non-nil if DIR contains a config file for direnv."
