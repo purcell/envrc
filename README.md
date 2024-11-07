@@ -161,5 +161,3 @@ previously such that it becomes a no-op.
 [💼 LinkedIn profile](https://uk.linkedin.com/in/stevepurcell)
 
 [✍ sanityinc.com](http://www.sanityinc.com/)
-
-[🐦 @sanityinc](https://twitter.com/sanityinc)
