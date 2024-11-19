@@ -26,6 +26,9 @@ each buffer, as a buffer-local variable.
 From a user perspective, both are well tested and typically work fine,
 but the `envrc.el` approach feels cleaner to me.
 
+Additionally, at the time of writing, `envrc.el` has early TRAMP support,
+while `direnv.el` does not.
+
 ## Installation
 
 Installable packages are available via MELPA: do
