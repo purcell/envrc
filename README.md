@@ -49,7 +49,7 @@ or
 ```el
 (add-hook 'after-init-hook 'envrc-global-mode)
 ```
-or, if you're a `use-package` fan:
+or, if you're a `use-package` fan (don't ask the author about this 😁):
 ```el
 (use-package envrc
   :hook (after-init . envrc-global-mode))
