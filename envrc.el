@@ -76,6 +76,13 @@
 Messages are written into the *envrc-debug* buffer."
   :type 'boolean)
 
+(defcustom envrc-add-to-mode-line-misc-info t
+  "When non-nil, append the envrc indicator to the mode line.
+Experienced users can set this to a nil value and then include the
+`envrc-indicator' anywhere they want in `mode-line-format' or related."
+  :group 'envrc
+  :type 'boolean)
+
 (defcustom envrc-update-on-eshell-directory-change t
   "Whether envrc will update environment when changing directory in eshell."
   :type 'boolean)
@@ -89,24 +96,24 @@ Messages are written into the *envrc-debug* buffer."
   "The direnv executable used by envrc."
   :type 'string)
 
-(define-obsolete-variable-alias 'envrc--lighter 'envrc-lighter "2021-05-17")
+(define-obsolete-variable-alias 'envrc--lighter 'envrc-indicator "2021-05-17")
 
-(defcustom envrc-lighter '(:eval (envrc--lighter))
+(defcustom envrc-indicator '(" envrc[" (:eval (envrc--status)) "]")
   "The mode line lighter for `envrc-mode'.
 You can set this to nil to disable the lighter."
   :type 'sexp)
-(put 'envrc-lighter 'risky-local-variable t)
+(put 'envrc-indicator 'risky-local-variable t)
 
-(defcustom envrc-none-lighter '(" envrc[" (:propertize "none" face envrc-mode-line-none-face) "]")
-  "Lighter spec used by the default `envrc-lighter' when envrc is inactive."
+(defcustom envrc-none-indicator '((:propertize "none" face envrc-mode-line-none-face))
+  "Construct spec used by the default `envrc-indicator' when envrc is inactive."
   :type 'sexp)
 
-(defcustom envrc-on-lighter '(" envrc[" (:propertize "on" face envrc-mode-line-on-face) "]")
-  "Lighter spec used by the default `envrc-lighter' when envrc is on."
+(defcustom envrc-on-indicator '((:propertize "on" face envrc-mode-line-on-face))
+  "Construct spec used by the default `envrc-indicator' when envrc is on."
   :type 'sexp)
 
-(defcustom envrc-error-lighter '(" envrc[" (:propertize "error" face envrc-mode-line-error-face) "]")
-  "Lighter spec used by the default `envrc-lighter' when envrc has errored."
+(defcustom envrc-error-indicator '((:propertize "error" face envrc-mode-line-error-face))
+  "Construct spec used by the default `envrc-indicator' when envrc has errored."
   :type 'sexp)
 
 (defcustom envrc-command-map
@@ -135,17 +142,27 @@ e.g. (define-key envrc-mode-map (kbd \"C-c e\") \\='envrc-command-map)"
   "Tramp connection methods that are supported by envrc."
   :type '(repeat string))
 
+(defvar envrc--used-mode-line-construct nil
+  "Mode line construct last added by `notmuch-indicator-mode'.")
+
 ;;;###autoload
 (define-minor-mode envrc-mode
   "A local minor mode in which env vars are set by direnv."
   :init-value nil
-  :lighter envrc-lighter
+  :lighter 'envrc
   :keymap envrc-mode-map
   (if envrc-mode
       (progn
+        (when envrc-add-to-mode-line-misc-info
+          (setq envrc--used-mode-line-construct envrc-indicator)
+           ;; NOTE since this is a minor mode, `mode-line-misc-info' needs to be
+           ;; controlled locally.
+          (make-local-variable 'mode-line-misc-info)
+          (add-to-list 'mode-line-misc-info envrc-indicator))
         (envrc--update)
         (when (and (derived-mode-p 'eshell-mode) envrc-update-on-eshell-directory-change)
           (add-hook 'eshell-directory-change-hook #'envrc--update nil t)))
+    (setq mode-line-misc-info (delete envrc--used-mode-line-construct mode-line-misc-info))
     (envrc--clear (current-buffer))
     (remove-hook 'eshell-directory-change-hook #'envrc--update t)))
 
@@ -191,12 +208,18 @@ local variables.")
 
 ;;; Internals
 
-(defun envrc--lighter ()
+(defvar envrc--status-timer nil
+  "Timer for updating the spinner.")
+
+(defvar envrc--status-index 0
+  "Current index in the spinner frames list.")
+
+(defun envrc--status ()
   "Return a colourised version of `envrc--status' for use in the mode line."
   (pcase envrc--status
-    (`on envrc-on-lighter)
-    (`error envrc-error-lighter)
-    (`none envrc-none-lighter)))
+    (`none envrc-none-indicator)
+    (`on envrc-on-indicator)
+    (`error envrc-error-indicator)))
 
 (defun envrc--env-dir-p (dir)
   "Return non-nil if DIR contains a config file for direnv."
