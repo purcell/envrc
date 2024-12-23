@@ -88,6 +88,11 @@ Experienced users can set this to a nil value and then include the
   :group 'envrc
   :type 'boolean)
 
+(defcustom envrc-status-frames '("=  " "== " "===" " ==" "  =" "   ")
+  "List of frames for the spinner."
+  :group 'envrc
+  :type '(repeat string))
+
 (defcustom envrc-update-on-eshell-directory-change t
   "Whether envrc will update environment when changing directory in eshell."
   :type 'boolean)
@@ -201,6 +206,9 @@ e.g. (define-key envrc-mode-map (kbd \"C-c e\") \\='envrc-command-map)"
 (defface envrc-mode-line-none-face '((t :inherit warning))
   "Face used in mode line to indicate that direnv is not active.")
 
+(defface envrc-mode-line-loading-face '((t :inherit mode-line-emphasis))
+  "Face used in mode line to indicate that direnv is loading the environment.")
+
 ;;; Global state
 
 (defvar envrc--cache (make-hash-table :test 'equal :size 10)
@@ -221,7 +229,7 @@ environment applied once the async process finishes.")
 
 (defvar-local envrc--status 'none
   "Symbol indicating state of the current buffer's direnv.
-One of \\='(none on error).")
+One of \\='(none loading on error).")
 
 (defvar-local envrc--remote-path nil
   "Buffer local variable for remote path.
@@ -236,13 +244,70 @@ local variables.")
 (defvar envrc--status-index 0
   "Current index in the spinner frames list.")
 
+(defvar envrc--loading-indicator nil
+  "Current frame to display during the loading indicator state.")
+
 (defun envrc--status ()
   "Return a colourised version of `envrc--status' for use in the mode line."
   (pcase envrc--status
     (`none envrc-none-indicator)
+    (`loading envrc--loading-indicator)
     (`on envrc-on-indicator)
     (`denied envrc-denied-indicator)
     (`error envrc-error-indicator)))
+
+(defvar envrc--loading-buf-list '()
+  "List of buffers that are loading an environment.")
+
+(defun envrc--status-update-buf (buf)
+  "Update the spinner in BUF's mode line."
+  (let ((spinner (nth envrc--status-index envrc-status-frames)))
+    (with-current-buffer buf
+      (setq envrc--loading-indicator `((:propertize ,spinner face envrc-mode-line-loading-face))
+            envrc--status 'loading)
+      (force-mode-line-update))))
+
+(defun envrc-status-update ()
+  "Update the spinner in the mode line.
+ENV-DIR is the directory where to update the status"
+  (let (keys)
+    (maphash (lambda (key _value)
+               (push key keys))
+             envrc--processes)
+    (walk-windows (lambda (win)
+                    (let ((win-buf (window-buffer win)))
+                      (unless (minibufferp win-buf)
+                        (with-current-buffer win-buf
+                          (when (member (envrc--find-env-dir) keys)
+                            (envrc--status-update-buf win-buf)))))))))
+
+(defun envrc-status-start ()
+  "Start the spinner and update it periodically.
+ENV-DIR is the directory where to update the status."
+  (unless envrc--status-timer
+    (setq envrc--status-index 0)
+    (setq envrc--status-timer
+          (run-with-timer 0 0.1 (lambda ()
+                                  (setq envrc--status-index
+                                        (mod (1+ envrc--status-index)
+                                             (length envrc-status-frames)))
+                                  (envrc-status-update))))))
+
+(defun envrc-status-stop (env-dir)
+  "Stop the spinner and remove it from the mode line.
+ENV-DIR is the directory where to update the status."
+  (when (and envrc--status-timer
+             (zerop (hash-table-count envrc--processes)))
+    (cancel-timer envrc--status-timer)
+    (setq envrc--status-timer nil))
+
+  (let ((status envrc--status))
+    (dolist (buf (envrc--mode-buffers))
+      (with-current-buffer buf
+        (when (equal (envrc--find-env-dir) env-dir)
+          (setq envrc--status status)
+          (force-mode-line-update))))))
+
 
 (defun envrc--env-dir-p (dir)
   "Return non-nil if DIR contains a config file for direnv."
@@ -635,7 +700,8 @@ SENTINEL, OUT-BUF, ERR-BUF and ARGS are the respective keywords of
                                  ;; should run in a buffer from the same
                                  ;; environment as the async process.
                                  (with-current-buffer env-buf
-                                   (funcall sentinel process msg))
+                                   (funcall sentinel process msg)
+                                   (envrc-status-stop env-dir))
                                (remhash env-dir envrc--processes)))))
     (if running-process
         (envrc--debug "Ignoring, process already running for %s." env-dir)
@@ -650,7 +716,9 @@ SENTINEL, OUT-BUF, ERR-BUF and ARGS are the respective keywords of
                        :command args)))
         (puthash env-dir `((process . ,process)
                            (subscribed . (,(current-buffer))))
-                 envrc--processes)))))
+                 envrc--processes)
+        (when envrc-add-to-mode-line-misc-info
+          (envrc-status-start))))))
 
 (defun envrc-reload ()
   "Reload the current env."
