@@ -85,6 +85,15 @@ Messages are written into the *envrc-debug* buffer."
   :group 'envrc
   :type 'boolean)
 
+(defcustom envrc-disable-in-minibuffer nil
+  "Whether or not to load environments in the minibuffer.
+
+A non-nil value will prevent the envrionment from propagating into the
+minibuffer.  Note that `completing-read' will not provide completion
+using the new environment."
+  :group 'envrc
+  :type 'boolean)
+
 (defcustom envrc-direnv-executable "direnv"
   "The direnv executable used by envrc."
   :type 'string)
@@ -154,7 +163,7 @@ e.g. (define-key envrc-mode-map (kbd \"C-c e\") \\='envrc-command-map)"
   (lambda ()
     (when
         (cond
-         ((minibufferp) nil)
+         ((and (minibufferp) envrc-disable-in-minibuffer) nil)
          ((file-remote-p default-directory)
           (and envrc-remote
                (seq-contains-p
