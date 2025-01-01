@@ -112,6 +112,10 @@ You can set this to nil to disable the lighter."
   "Construct spec used by the default `envrc-indicator' when envrc is on."
   :type 'sexp)
 
+(defcustom envrc-denied-indicator '((:propertize "denied" face envrc-mode-line-denied-face))
+  "Construct spec used by the default `envrc-indicator' when envrc is blocked."
+  :type 'sexp)
+
 (defcustom envrc-error-indicator '((:propertize "error" face envrc-mode-line-error-face))
   "Construct spec used by the default `envrc-indicator' when envrc has errored."
   :type 'sexp)
@@ -183,6 +187,9 @@ e.g. (define-key envrc-mode-map (kbd \"C-c e\") \\='envrc-command-map)"
 (defface envrc-mode-line-on-face '((t :inherit success))
   "Face used in mode line to indicate that direnv is in effect.")
 
+(defface envrc-mode-line-denied-face '((t :inherit shadow))
+  "Face used in mode line to indicate that direnv blocking env.")
+
 (defface envrc-mode-line-error-face '((t :inherit error))
   "Face used in mode line to indicate that direnv failed.")
 
@@ -219,6 +226,7 @@ local variables.")
   (pcase envrc--status
     (`none envrc-none-indicator)
     (`on envrc-on-indicator)
+    (`denied envrc-denied-indicator)
     (`error envrc-error-indicator)))
 
 (defun envrc--env-dir-p (dir)
@@ -240,6 +248,24 @@ called `cd'"
       ;; `locate-dominating-file' appears to sometimes return abbreviated paths, e.g. with ~
       (setq env-dir (expand-file-name env-dir)))
     env-dir))
+
+(defun envrc--find-deny-hash (env-dir)
+  "Return the envrc file hash from ENV-DIR."
+  (when-let* ((file-path (or (expand-file-name ".envrc" env-dir)
+                             (expand-file-name ".env" env-dir)))
+              (contents (with-temp-buffer
+                          (insert file-path "\n")
+                          (buffer-string))))
+    (secure-hash 'sha256 contents)))
+
+(defun envrc--denied-p (env-dir)
+  "Return TRUE if ENV-DIR is blocked."
+  (let ((deny-hash (envrc--find-deny-hash env-dir))
+        (deny-path (concat (or (getenv "XDG_DATA_HOME")
+                               (concat (getenv "HOME") "/.local/share"))
+                           "/direnv/deny")))
+      (locate-file deny-hash
+                   (list deny-path))))
 
 (defun envrc--cache-key (env-dir process-env)
   "Get a hash key for the result of invoking direnv in ENV-DIR with PROCESS-ENV.
@@ -332,17 +358,25 @@ variable names and values."
                               (insert-file-contents stderr-file)
                               (buffer-string))
                             (buffer-string))
-              (if (eq 0 exit-code) ;; zerop is not an option, as exit-code may sometimes be a symbol
-                  (progn
-                    (if (zerop (buffer-size))
-                        (setq result 'none)
-                      (goto-char (point-min))
-                      (prog1
-                          (setq result (let ((json-key-type 'string)) (json-read-object)))
-                        (when envrc-show-summary-in-minibuffer
-                          (envrc--show-summary result env-dir)))))
-                (message "Direnv failed in %s" env-dir)
-                (setq result 'error))
+              (cond ((eq 0 exit-code) ;; zerop is not an option, as exit-code may sometimes be a symbol
+                     (progn
+                       (if (zerop (buffer-size))
+                           (setq result 'none)
+                         (goto-char (point-min))
+                         (prog1
+                             (if (envrc--denied-p env-dir)
+                                 (setq result 'denied)
+                               (setq result (let ((json-key-type 'string)) (json-read-object))))
+                           (when envrc-show-summary-in-minibuffer
+                             (envrc--show-summary result env-dir))))))
+                    ((eq 9 exit-code)
+                     (message "Direnv killed in %s" env-dir)
+                     (if (envrc--denied-p env-dir)
+                         (setq result 'denied)
+                       (setq result 'error)))
+                    (t
+                     (message "Direnv failed in %s" env-dir)
+                     (setq result 'error)))
               (envrc--at-end-of-special-buffer "*envrc*"
                 (insert "──── " (format-time-string "%Y-%m-%d %H:%M:%S") " ──── " env-dir " ────\n\n")
                 (let ((initial-pos (point)))
@@ -389,7 +423,7 @@ also appear in PAIRS."
   "Update BUF with RESULT, which is a result of `envrc--export'."
   (with-current-buffer buf
     (setq-local envrc--status (if (listp result) 'on result))
-    (if (memq result '(none error))
+    (if (memq result '(none error denied))
         (progn
           (envrc--clear buf)
           (envrc--debug "[%s] reset environment to default" buf))
