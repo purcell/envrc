@@ -393,8 +393,7 @@ also appear in PAIRS."
             (setq-local eshell-path-env path)))
         (when-let ((info-path (getenv-internal "INFOPATH" env)))
           (setq-local Info-directory-list
-                      (seq-filter #'identity ; Filter-out nil.
-                                  (parse-colon-path info-path))))))))
+                      (seq-filter #'identity (parse-colon-path info-path))))))))
 
 (defun envrc--update-env (env-dir)
   "Refresh the state of the direnv in ENV-DIR and apply in all relevant buffers."
