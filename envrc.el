@@ -161,7 +161,8 @@ e.g. (define-key envrc-mode-map (kbd \"C-c e\") \\='envrc-command-map)"
                 envrc-supported-tramp-methods
                 (with-parsed-tramp-file-name default-directory vec vec-method))))
          (t (executable-find envrc-direnv-executable)))
-      (envrc-mode 1))))
+      (envrc-mode 1)))
+  :predicate t)
 
 (defface envrc-mode-line-on-face '((t :inherit success))
   "Face used in mode line to indicate that direnv is in effect.")
