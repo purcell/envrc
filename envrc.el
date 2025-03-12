@@ -513,8 +513,7 @@ Shortcuts tramp caching direnv sets the exec-path."
     (or envrc--remote-path
         (apply fn vec nil))))
 
-(advice-add 'shell-command-to-string :around #'envrc-propagate-environment)
-(advice-add 'async-shell-command :around #'envrc-propagate-environment)
+(advice-add 'shell-command :around #'envrc-propagate-environment)
 (advice-add 'org-babel-eval :around #'envrc-propagate-environment)
 (advice-add 'tramp-get-connection-buffer :filter-return #'envrc-propagate-tramp-environment)
 (advice-add 'tramp-get-remote-path :around #'envrc-get-remote-path)
