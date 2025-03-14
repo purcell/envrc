@@ -323,9 +323,10 @@ variable names and values."
               (envrc--at-end-of-special-buffer "*envrc*"
                 (insert "──── " (format-time-string "%Y-%m-%d %H:%M:%S") " ──── " env-dir " ────\n\n")
                 (let ((initial-pos (point)))
-                  (insert-file-contents (let (ansi-color-context)
-                                          (ansi-color-apply stderr-file)))
+                  (insert-file-contents stderr-file)
                   (goto-char (point-max))
+                  (let (ansi-color-context)
+                    (ansi-color-apply-on-region initial-pos (point)))
                   (add-face-text-property initial-pos (point) (if (eq 0 exit-code) 'success 'error)))
                 (insert "\n\n")
                 (when (and (numberp exit-code) (/= 0 exit-code))
