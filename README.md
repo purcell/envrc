@@ -95,6 +95,9 @@ is a prominent example!
 
 The `inheritenv` package was designed to handle this case in general.
 
+`lsp-mode` users might want to use `lsp-deferred` rather than `lsp`, so
+that path modifications are available when the sub-process is launched.
+
 ## Design notes
 
 By default, Emacs has a single global set of environment variables
