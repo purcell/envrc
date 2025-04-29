@@ -372,7 +372,7 @@ also appear in PAIRS."
           (envrc--clear buf)
           (envrc--debug "[%s] reset environment to default" buf))
       (envrc--debug "[%s] applied merged environment" buf)
-      (let* ((remote (when-let ((fn (buffer-file-name buf)))
+      (let* ((remote (when-let* ((fn (buffer-file-name buf)))
                        (file-remote-p fn)))
              (env (envrc--merged-environment
                    (default-value (if remote
@@ -392,7 +392,7 @@ also appear in PAIRS."
           (if (fboundp 'eshell-set-path)
               (eshell-set-path path)
             (setq-local eshell-path-env path)))
-        (when-let ((info-path (getenv-internal "INFOPATH" env)))
+        (when-let* ((info-path (getenv-internal "INFOPATH" env)))
           (setq-local Info-directory-list
                       (seq-filter #'identity (parse-colon-path info-path))))))))
 
@@ -481,7 +481,7 @@ This can be useful if a .envrc has been deleted."
 (defun envrc-show-log ()
   "Open envrc log buffer."
   (interactive)
-  (if-let ((buffer (get-buffer "*envrc*")))
+  (if-let* ((buffer (get-buffer "*envrc*")))
       (pop-to-buffer buffer)
     (message "Envrc log buffer does not exist")))
 
@@ -508,8 +508,8 @@ in a temp buffer.  ARGS is as for ORIG."
   buf)
 
 (defun envrc-get-remote-path (fn vec)
-  "Advice function to wrap `tramp-get-remote-path'.
-Shortcuts tramp caching direnv sets the exec-path."
+  "Advice function FN to wrap `tramp-get-remote-path' VEC.
+Shortcuts tramp caching direnv sets the variable `exec-path'."
   (with-current-buffer (tramp-get-connection-buffer vec)
     (or envrc--remote-path
         (apply fn vec nil))))
