@@ -222,23 +222,23 @@ called `cd'"
   "Get a hash key for the result of invoking direnv in ENV-DIR with PROCESS-ENV.
 PROCESS-ENV should be the environment in which direnv was run,
 since its output can vary according to its initial environment."
-  (mapconcat 'identity (cons env-dir process-env) "\0"))
+  (string-join (cons env-dir process-env) "\0"))
 
 (defun envrc--update ()
   "Update the current buffer's environment if it is managed by direnv.
 All envrc.el-managed buffers with this env will have their
 environments updated."
-  (let ((env-dir (envrc--find-env-dir)))
-    (let ((result
-           (if env-dir
-               (let ((cache-key (envrc--cache-key env-dir (default-value 'process-environment))))
-                 (pcase (gethash cache-key envrc--cache 'missing)
-                   (`missing (let ((calculated (envrc--export env-dir)))
-                               (puthash cache-key calculated envrc--cache)
-                               calculated))
-                   (cached cached)))
-             'none)))
-      (envrc--apply (current-buffer) result))))
+  (let* ((env-dir (envrc--find-env-dir))
+         (result
+          (if env-dir
+              (let ((cache-key (envrc--cache-key env-dir (default-value 'process-environment))))
+                (pcase (gethash cache-key envrc--cache 'missing)
+                  (`missing (let ((calculated (envrc--export env-dir)))
+                              (puthash cache-key calculated envrc--cache)
+                              calculated))
+                  (cached cached)))
+            'none)))
+    (envrc--apply (current-buffer) result)))
 
 (defmacro envrc--at-end-of-special-buffer (name &rest body)
   "At the end of `special-mode' buffer NAME, execute BODY.
@@ -264,11 +264,11 @@ MSG and ARGS are as for that function."
   "Create a summary string for ITEMS."
   (if items
       (cl-loop for (name . val) in items
-               if (not (string-prefix-p "DIRENV_" name))
+               with process-environment = (default-value 'process-environment)
+               unless (string-prefix-p "DIRENV_" name)
                collect (cons name
                              (if val
-                                 (if (let ((process-environment (default-value 'process-environment)))
-                                       (getenv name))
+                                 (if (getenv name)
                                      '("~" diff-changed)
                                    '("+" diff-added))
                                '("-" diff-removed)))
