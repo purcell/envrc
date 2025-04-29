@@ -523,6 +523,8 @@ Shortcuts tramp caching direnv sets the exec-path."
 
 ;;; Major mode for .envrc files
 
+;; Generate direnv keywords with:
+;;     $ rg "Usage:\s+([^_]\w+)" DIRENV_SRC/stdlib.sh -Nor '"$1"' | sort | uniq
 (defvar envrc-file-extra-keywords
   '("MANPATH_add" "PATH_add" "PATH_rm" "direnv_apply_dump" "direnv_layout_dir"
     "direnv_load" "direnv_version" "dotenv" "dotenv_if_exists"
@@ -530,7 +532,8 @@ Shortcuts tramp caching direnv sets the exec-path."
     "layout" "load_prefix" "log_error" "log_status" "on_git_branch" "path_add"
     "path_rm" "rvm" "semver_search" "source_env" "source_env_if_exists"
     "source_up" "source_up_if_exists" "source_url" "strict_env" "unstrict_env"
-    "use" "use_guix" "use_flake" "use_nix" "user_rel_path" "watch_dir" "watch_file")
+    "use" "use_flake" "use_flox" "use_guix" "use_nix" "use_vim" "user_rel_path"
+    "watch_dir" "watch_file")
   "Useful direnv keywords to be highlighted.")
 
 (declare-function sh-set-shell "sh-script")
