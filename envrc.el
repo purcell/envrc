@@ -508,7 +508,8 @@ in a temp buffer.  ARGS is as for ORIG."
   buf)
 
 (defun envrc-get-remote-path (fn vec)
-  "Advice function FN to wrap `tramp-get-remote-path' VEC.
+  "Advice function to wrap FN (`tramp-get-remote-path'),
+with its argument VEC.
 Shortcuts tramp caching direnv sets the variable `exec-path'."
   (with-current-buffer (tramp-get-connection-buffer vec)
     (or envrc--remote-path
