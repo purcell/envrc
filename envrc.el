@@ -222,23 +222,23 @@ called `cd'"
   "Get a hash key for the result of invoking direnv in ENV-DIR with PROCESS-ENV.
 PROCESS-ENV should be the environment in which direnv was run,
 since its output can vary according to its initial environment."
-  (mapconcat 'identity (cons env-dir process-env) "\0"))
+  (string-join (cons env-dir process-env) "\0"))
 
 (defun envrc--update ()
   "Update the current buffer's environment if it is managed by direnv.
 All envrc.el-managed buffers with this env will have their
 environments updated."
-  (let ((env-dir (envrc--find-env-dir)))
-    (let ((result
-           (if env-dir
-               (let ((cache-key (envrc--cache-key env-dir (default-value 'process-environment))))
-                 (pcase (gethash cache-key envrc--cache 'missing)
-                   (`missing (let ((calculated (envrc--export env-dir)))
-                               (puthash cache-key calculated envrc--cache)
-                               calculated))
-                   (cached cached)))
-             'none)))
-      (envrc--apply (current-buffer) result))))
+  (let* ((env-dir (envrc--find-env-dir))
+         (result
+          (if env-dir
+              (let ((cache-key (envrc--cache-key env-dir (default-value 'process-environment))))
+                (pcase (gethash cache-key envrc--cache 'missing)
+                  (`missing (let ((calculated (envrc--export env-dir)))
+                              (puthash cache-key calculated envrc--cache)
+                              calculated))
+                  (cached cached)))
+            'none)))
+    (envrc--apply (current-buffer) result)))
 
 (defmacro envrc--at-end-of-special-buffer (name &rest body)
   "At the end of `special-mode' buffer NAME, execute BODY.
@@ -264,11 +264,11 @@ MSG and ARGS are as for that function."
   "Create a summary string for ITEMS."
   (if items
       (cl-loop for (name . val) in items
-               if (not (string-prefix-p "DIRENV_" name))
+               with process-environment = (default-value 'process-environment)
+               unless (string-prefix-p "DIRENV_" name)
                collect (cons name
                              (if val
-                                 (if (let ((process-environment (default-value 'process-environment)))
-                                       (getenv name))
+                                 (if (getenv name)
                                      '("~" diff-changed)
                                    '("+" diff-added))
                                '("-" diff-removed)))
@@ -372,7 +372,7 @@ also appear in PAIRS."
           (envrc--clear buf)
           (envrc--debug "[%s] reset environment to default" buf))
       (envrc--debug "[%s] applied merged environment" buf)
-      (let* ((remote (when-let ((fn (buffer-file-name buf)))
+      (let* ((remote (when-let* ((fn (buffer-file-name buf)))
                        (file-remote-p fn)))
              (env (envrc--merged-environment
                    (default-value (if remote
@@ -392,7 +392,7 @@ also appear in PAIRS."
           (if (fboundp 'eshell-set-path)
               (eshell-set-path path)
             (setq-local eshell-path-env path)))
-        (when-let ((info-path (getenv-internal "INFOPATH" env)))
+        (when-let* ((info-path (getenv-internal "INFOPATH" env)))
           (setq-local Info-directory-list
                       (seq-filter #'identity (parse-colon-path info-path))))))))
 
@@ -481,7 +481,7 @@ This can be useful if a .envrc has been deleted."
 (defun envrc-show-log ()
   "Open envrc log buffer."
   (interactive)
-  (if-let ((buffer (get-buffer "*envrc*")))
+  (if-let* ((buffer (get-buffer "*envrc*")))
       (pop-to-buffer buffer)
     (message "Envrc log buffer does not exist")))
 
@@ -508,8 +508,9 @@ in a temp buffer.  ARGS is as for ORIG."
   buf)
 
 (defun envrc-get-remote-path (fn vec)
-  "Advice function to wrap `tramp-get-remote-path'.
-Shortcuts tramp caching direnv sets the exec-path."
+  "Advice function to wrap FN (`tramp-get-remote-path'),
+with its argument VEC.
+Shortcuts tramp caching direnv sets the variable `exec-path'."
   (with-current-buffer (tramp-get-connection-buffer vec)
     (or envrc--remote-path
         (apply fn vec nil))))
@@ -523,6 +524,8 @@ Shortcuts tramp caching direnv sets the exec-path."
 
 ;;; Major mode for .envrc files
 
+;; Generate direnv keywords with:
+;;     $ rg "Usage:\s+([^_]\w+)" DIRENV_SRC/stdlib.sh -Nor '"$1"' | sort | uniq
 (defvar envrc-file-extra-keywords
   '("MANPATH_add" "PATH_add" "PATH_rm" "direnv_apply_dump" "direnv_layout_dir"
     "direnv_load" "direnv_version" "dotenv" "dotenv_if_exists"
@@ -530,7 +533,8 @@ Shortcuts tramp caching direnv sets the exec-path."
     "layout" "load_prefix" "log_error" "log_status" "on_git_branch" "path_add"
     "path_rm" "rvm" "semver_search" "source_env" "source_env_if_exists"
     "source_up" "source_up_if_exists" "source_url" "strict_env" "unstrict_env"
-    "use" "use_guix" "use_flake" "use_nix" "user_rel_path" "watch_dir" "watch_file")
+    "use" "use_flake" "use_flox" "use_guix" "use_nix" "use_vim" "user_rel_path"
+    "watch_dir" "watch_file")
   "Useful direnv keywords to be highlighted.")
 
 (declare-function sh-set-shell "sh-script")
