@@ -10,7 +10,7 @@ jobs:
     steps:
     - uses: purcell/setup-emacs@master
       with:
-        version: 29.3
+        version: 30.2
     - uses: actions/checkout@v4
     - name: Run tests
       run: make package-lint
@@ -25,6 +25,7 @@ jobs:
           - 28.2
           - 29.1
           - 29.3
+          - 30.2
           - release-snapshot
           - snapshot
     steps:
