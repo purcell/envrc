@@ -435,38 +435,33 @@ ARGS is as for `call-process'."
         (process-environment (default-value 'process-environment)))
     (apply 'process-file args)))
 
+(defun envrc--run-direnv (verb)
+  "Run direnv command named by VERB, then refresh current env."
+  (envrc--with-required-current-env env-dir
+    (let* ((outbuf (get-buffer-create (format "*envrc-%s*" verb)))
+           (default-directory env-dir)
+           (exit-code (envrc--call-process-with-global-env envrc-direnv-executable nil outbuf nil verb)))
+      (if (zerop exit-code)
+          (progn
+            (envrc--update-env env-dir)
+            (kill-buffer outbuf))
+        (display-buffer outbuf)
+        (user-error "Error running direnv %s" verb)))))
+
 (defun envrc-reload ()
   "Reload the current env."
   (interactive)
-  (envrc--with-required-current-env env-dir
-    (let* ((default-directory env-dir)
-           (exit-code (envrc--call-process-with-global-env envrc-direnv-executable nil (get-buffer-create "*envrc-reload*") nil "reload")))
-      (if (zerop exit-code)
-          (envrc--update-env env-dir)
-        (display-buffer "*envrc-reload*")
-        (user-error "Error running direnv reload")))))
+  (envrc--run-direnv "reload"))
 
 (defun envrc-allow ()
   "Run \"direnv allow\" in the current env."
   (interactive)
-  (envrc--with-required-current-env env-dir
-    (let* ((default-directory env-dir)
-           (exit-code (envrc--call-process-with-global-env envrc-direnv-executable nil (get-buffer-create "*envrc-allow*") nil "allow")))
-      (if (zerop exit-code)
-          (envrc--update-env env-dir)
-        (display-buffer "*envrc-allow*")
-        (user-error "Error running direnv allow")))))
+  (envrc--run-direnv "allow"))
 
 (defun envrc-deny ()
   "Run \"direnv deny\" in the current env."
   (interactive)
-  (envrc--with-required-current-env env-dir
-    (let* ((default-directory env-dir)
-           (exit-code (envrc--call-process-with-global-env envrc-direnv-executable nil (get-buffer-create "*envrc-deny*") nil "deny")))
-      (if (zerop exit-code)
-          (envrc--update-env env-dir)
-        (display-buffer "*envrc-deny*")
-        (user-error "Error running direnv deny")))))
+  (envrc--run-direnv "deny"))
 
 (defun envrc-reload-all ()
   "Reload direnvs for all buffers.
