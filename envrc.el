@@ -76,6 +76,13 @@
 Messages are written into the *envrc-debug* buffer."
   :type 'boolean)
 
+(defcustom envrc-add-to-mode-line-misc-info t
+  "When non-nil, append the envrc indicator to the mode line.
+Experienced users can set this to a nil value and then include the
+`envrc-indicator' anywhere they want in `mode-line-format' or related."
+  :group 'envrc
+  :type 'boolean)
+
 (defcustom envrc-update-on-eshell-directory-change t
   "Whether envrc will update environment when changing directory in eshell."
   :type 'boolean)
@@ -89,24 +96,28 @@ Messages are written into the *envrc-debug* buffer."
   "The direnv executable used by envrc."
   :type 'string)
 
-(define-obsolete-variable-alias 'envrc--lighter 'envrc-lighter "2021-05-17")
+(define-obsolete-variable-alias 'envrc--lighter 'envrc-indicator "2021-05-17")
 
-(defcustom envrc-lighter '(:eval (envrc--lighter))
+(defcustom envrc-indicator '(" envrc[" (:eval (envrc--status)) "]")
   "The mode line lighter for `envrc-mode'.
 You can set this to nil to disable the lighter."
   :type 'sexp)
-(put 'envrc-lighter 'risky-local-variable t)
+(put 'envrc-indicator 'risky-local-variable t)
 
-(defcustom envrc-none-lighter '(" envrc[" (:propertize "none" face envrc-mode-line-none-face) "]")
-  "Lighter spec used by the default `envrc-lighter' when envrc is inactive."
+(defcustom envrc-none-indicator '((:propertize "none" face envrc-mode-line-none-face))
+  "Construct spec used by the default `envrc-indicator' when envrc is inactive."
   :type 'sexp)
 
-(defcustom envrc-on-lighter '(" envrc[" (:propertize "on" face envrc-mode-line-on-face) "]")
-  "Lighter spec used by the default `envrc-lighter' when envrc is on."
+(defcustom envrc-on-indicator '((:propertize "on" face envrc-mode-line-on-face))
+  "Construct spec used by the default `envrc-indicator' when envrc is on."
   :type 'sexp)
 
-(defcustom envrc-error-lighter '(" envrc[" (:propertize "error" face envrc-mode-line-error-face) "]")
-  "Lighter spec used by the default `envrc-lighter' when envrc has errored."
+(defcustom envrc-denied-indicator '((:propertize "denied" face envrc-mode-line-denied-face))
+  "Construct spec used by the default `envrc-indicator' when envrc is blocked."
+  :type 'sexp)
+
+(defcustom envrc-error-indicator '((:propertize "error" face envrc-mode-line-error-face))
+  "Construct spec used by the default `envrc-indicator' when envrc has errored."
   :type 'sexp)
 
 (defcustom envrc-command-map
@@ -135,17 +146,27 @@ e.g. (define-key envrc-mode-map (kbd \"C-c e\") \\='envrc-command-map)"
   "Tramp connection methods that are supported by envrc."
   :type '(repeat string))
 
+(defvar envrc--used-mode-line-construct nil
+  "Mode line construct last added by `notmuch-indicator-mode'.")
+
 ;;;###autoload
 (define-minor-mode envrc-mode
   "A local minor mode in which env vars are set by direnv."
   :init-value nil
-  :lighter envrc-lighter
+  :lighter 'envrc
   :keymap envrc-mode-map
   (if envrc-mode
       (progn
+        (when envrc-add-to-mode-line-misc-info
+          (setq envrc--used-mode-line-construct envrc-indicator)
+           ;; NOTE since this is a minor mode, `mode-line-misc-info' needs to be
+           ;; controlled locally.
+          (make-local-variable 'mode-line-misc-info)
+          (add-to-list 'mode-line-misc-info envrc-indicator))
         (envrc--update)
         (when (and (derived-mode-p 'eshell-mode) envrc-update-on-eshell-directory-change)
           (add-hook 'eshell-directory-change-hook #'envrc--update nil t)))
+    (setq mode-line-misc-info (delete envrc--used-mode-line-construct mode-line-misc-info))
     (envrc--clear (current-buffer))
     (remove-hook 'eshell-directory-change-hook #'envrc--update t)))
 
@@ -165,6 +186,9 @@ e.g. (define-key envrc-mode-map (kbd \"C-c e\") \\='envrc-command-map)"
 
 (defface envrc-mode-line-on-face '((t :inherit success))
   "Face used in mode line to indicate that direnv is in effect.")
+
+(defface envrc-mode-line-denied-face '((t :inherit shadow))
+  "Face used in mode line to indicate that direnv blocking env.")
 
 (defface envrc-mode-line-error-face '((t :inherit error))
   "Face used in mode line to indicate that direnv failed.")
@@ -191,12 +215,19 @@ local variables.")
 
 ;;; Internals
 
-(defun envrc--lighter ()
+(defvar envrc--status-timer nil
+  "Timer for updating the spinner.")
+
+(defvar envrc--status-index 0
+  "Current index in the spinner frames list.")
+
+(defun envrc--status ()
   "Return a colourised version of `envrc--status' for use in the mode line."
   (pcase envrc--status
-    (`on envrc-on-lighter)
-    (`error envrc-error-lighter)
-    (`none envrc-none-lighter)))
+    (`none envrc-none-indicator)
+    (`on envrc-on-indicator)
+    (`denied envrc-denied-indicator)
+    (`error envrc-error-indicator)))
 
 (defun envrc--env-dir-p (dir)
   "Return non-nil if DIR contains a config file for direnv."
@@ -217,6 +248,24 @@ called `cd'"
       ;; `locate-dominating-file' appears to sometimes return abbreviated paths, e.g. with ~
       (setq env-dir (expand-file-name env-dir)))
     env-dir))
+
+(defun envrc--find-deny-hash (env-dir)
+  "Return the envrc file hash from ENV-DIR."
+  (when-let* ((file-path (or (expand-file-name ".envrc" env-dir)
+                             (expand-file-name ".env" env-dir)))
+              (contents (with-temp-buffer
+                          (insert file-path "\n")
+                          (buffer-string))))
+    (secure-hash 'sha256 contents)))
+
+(defun envrc--denied-p (env-dir)
+  "Return TRUE if ENV-DIR is blocked."
+  (let ((deny-hash (envrc--find-deny-hash env-dir))
+        (deny-path (concat (or (getenv "XDG_DATA_HOME")
+                               (concat (getenv "HOME") "/.local/share"))
+                           "/direnv/deny")))
+      (locate-file deny-hash
+                   (list deny-path))))
 
 (defun envrc--cache-key (env-dir process-env)
   "Get a hash key for the result of invoking direnv in ENV-DIR with PROCESS-ENV.
@@ -309,17 +358,25 @@ variable names and values."
                               (insert-file-contents stderr-file)
                               (buffer-string))
                             (buffer-string))
-              (if (eq 0 exit-code) ;; zerop is not an option, as exit-code may sometimes be a symbol
-                  (progn
-                    (if (zerop (buffer-size))
-                        (setq result 'none)
-                      (goto-char (point-min))
-                      (prog1
-                          (setq result (let ((json-key-type 'string)) (json-read-object)))
-                        (when envrc-show-summary-in-minibuffer
-                          (envrc--show-summary result env-dir)))))
-                (message "Direnv failed in %s" env-dir)
-                (setq result 'error))
+              (cond ((eq 0 exit-code) ;; zerop is not an option, as exit-code may sometimes be a symbol
+                     (progn
+                       (if (zerop (buffer-size))
+                           (setq result 'none)
+                         (goto-char (point-min))
+                         (prog1
+                             (if (envrc--denied-p env-dir)
+                                 (setq result 'denied)
+                               (setq result (let ((json-key-type 'string)) (json-read-object))))
+                           (when envrc-show-summary-in-minibuffer
+                             (envrc--show-summary result env-dir))))))
+                    ((eq 9 exit-code)
+                     (message "Direnv killed in %s" env-dir)
+                     (if (envrc--denied-p env-dir)
+                         (setq result 'denied)
+                       (setq result 'error)))
+                    (t
+                     (message "Direnv failed in %s" env-dir)
+                     (setq result 'error)))
               (envrc--at-end-of-special-buffer "*envrc*"
                 (insert "──── " (format-time-string "%Y-%m-%d %H:%M:%S") " ──── " env-dir " ────\n\n")
                 (let ((initial-pos (point)))
@@ -367,7 +424,7 @@ also appear in PAIRS."
   "Update BUF with RESULT, which is a result of `envrc--export'."
   (with-current-buffer buf
     (setq-local envrc--status (if (listp result) 'on result))
-    (if (memq result '(none error))
+    (if (memq result '(none error denied))
         (progn
           (envrc--clear buf)
           (envrc--debug "[%s] reset environment to default" buf))
