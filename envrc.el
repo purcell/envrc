@@ -334,8 +334,9 @@ variable names and values."
       (delete-file stderr-file))
     result))
 
-;; Forward declaration for the byte compiler
+;; Forward declarations for the byte compiler
 (defvar eshell-path-env)
+(defvar Info-directory-list)
 
 (defun envrc--merged-environment (process-env pairs)
   "Make a `process-environment' value that merges PROCESS-ENV with PAIRS.
