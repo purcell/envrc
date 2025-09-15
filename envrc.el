@@ -360,9 +360,12 @@ also appear in PAIRS."
     (kill-local-variable 'info-directory-list)
     (when (derived-mode-p 'eshell-mode)
       (if (fboundp 'eshell-set-path)
-          (eshell-set-path (butlast exec-path))
+          (eshell-set-path
+           (if (file-remote-p default-directory)
+               (with-parsed-tramp-file-name default-directory nil
+                 (tramp-get-remote-path v))
+             (butlast exec-path)))
         (kill-local-variable 'eshell-path-env)))))
-
 
 (defun envrc--apply (buf result)
   "Update BUF with RESULT, which is a result of `envrc--export'."
@@ -380,8 +383,10 @@ also appear in PAIRS."
                                       'tramp-remote-process-environment
                                     'process-environment))
                    result))
-             (path (getenv-internal "PATH" env))
-             (parsed-path (parse-colon-path path)))
+             (parsed-path (if (file-remote-p default-directory)
+                              (with-parsed-tramp-file-name default-directory nil
+                                (tramp-get-remote-path v))
+                            (parse-colon-path (getenv-internal "PATH" env)))))
         (if remote
             (setq-local tramp-remote-process-environment env)
           (setq-local process-environment env))
@@ -391,7 +396,7 @@ also appear in PAIRS."
           (setq-local exec-path parsed-path))
         (when (derived-mode-p 'eshell-mode)
           (if (fboundp 'eshell-set-path)
-              (eshell-set-path path)
+              (eshell-set-path parsed-path)
             (setq-local eshell-path-env path)))
         (when-let* ((info-path (getenv-internal "INFOPATH" env)))
           (setq-local Info-directory-list
