@@ -1,6 +1,6 @@
 ;;; envrc.el --- Support for `direnv' that operates buffer-locally  -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2020  Steve Purcell
+;; Copyright (C) 2020-2026  Steve Purcell
 
 ;; Author: Steve Purcell <steve@sanityinc.com>
 ;; Keywords: processes, tools
