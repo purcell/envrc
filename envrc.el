@@ -517,6 +517,7 @@ Shortcuts tramp caching direnv sets the variable `exec-path'."
 (advice-add 'shell-command :around #'envrc-propagate-environment)
 (advice-add 'org-babel-eval :around #'envrc-propagate-environment)
 (advice-add 'org-export-file :around #'envrc-propagate-environment)
+(advice-add 'vc-do-command :around #'envrc-propagate-environment)
 (advice-add 'tramp-get-connection-buffer :filter-return #'envrc-propagate-tramp-environment)
 (advice-add 'tramp-get-remote-path :around #'envrc-get-remote-path)
 
