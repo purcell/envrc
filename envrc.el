@@ -374,7 +374,7 @@ also appear in PAIRS."
         (progn
           (envrc--debug "[%s] reset environment to default" buf))
       (envrc--debug "[%s] applied merged environment" buf)
-      (let* ((remote (when-let* ((fn (buffer-file-name buf)))
+      (let* ((remote (when-let* ((fn (or (buffer-file-name buf) default-directory)))
                        (file-remote-p fn)))
              (env (envrc--merged-environment
                    (default-value (if remote
