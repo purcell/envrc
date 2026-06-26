@@ -190,7 +190,15 @@ One of \\='(none on error).")
 If set, this will override `tramp-remote-path' via connection
 local variables.")
 
+(defvar-local envrc--local-env-pairs '()
+  "Buffer local environment variable overrides.
+If set, this will override project environment variables.")
+
 ;;; Internals
+
+(defun envrc--add-local-env (env-name env-value)
+  "Function used to set the buffer local environment variable overrides."
+  (add-to-list 'envrc--local-env-pairs `(,env-name . ,env-value)))
 
 (defun envrc--lighter ()
   "Return a colourised version of `envrc--status' for use in the mode line."
@@ -239,7 +247,11 @@ environments updated."
                               calculated))
                   (cached cached)))
             'none)))
-    (envrc--apply (current-buffer) result)))
+    (if envrc--local-env-pairs
+        (if (listp result)
+            (envrc--apply (current-buffer) (append envrc--local-env-pairs result))
+          (envrc--apply (current-buffer) envrc--local-env-pairs))
+      (envrc--apply (current-buffer) result))))
 
 (defmacro envrc--at-end-of-special-buffer (name &rest body)
   "At the end of `special-mode' buffer NAME, execute BODY.
@@ -339,19 +351,41 @@ variable names and values."
 (defvar eshell-path-env)
 (defvar Info-directory-list)
 
+(defun envrc--process-environment-to-alist (&optional process-env)
+      "Convert the process-environment strings into a Lisp alist."
+      (let (alist)
+        ;; Iterate through each "KEY=VALUE" string in process-environment
+        (dolist (env-var (or process-env process-environment))
+          (let* ((eq-index (string-match "=" env-var))
+                 key value)
+            (if eq-index
+                (setq key (substring env-var 0 eq-index)
+                      value (substring env-var (1+ eq-index) (length env-var)))
+              (setq key env-var
+                    value nil))
+            ;; Add the key-value pair as a cons cell to the front of the alist
+            (push (cons key value) alist)))
+        ;; reversed to maintain original order
+        (nreverse alist)))
+
 (defun envrc--merged-environment (process-env pairs)
   "Make a `process-environment' value that merges PROCESS-ENV with PAIRS.
 PAIRS is an alist obtained from direnv's output.
 Values from PROCESS-ENV will be included, but their values will
 be masked by Emacs' handling of `process-environment' if they
 also appear in PAIRS."
-  (append (mapcar (lambda (pair)
-                    (if (cdr pair)
-                        (format "%s=%s" (car pair) (cdr pair))
-                      ;; Plain env name is the syntax for unsetting vars
-                      (car pair)))
-                  pairs)
-          process-env))
+  (let ((process-env-pairs (envrc--process-environment-to-alist process-env))
+        env-name-list env-name result)
+    (dolist (pair (append pairs process-env-pairs))
+      (setq env-name (car pair))
+      ;; env-name in front of the list takes precendence, also prevent duplication
+      (unless (and env-name-list (member env-name env-name-list))
+        (add-to-list 'env-name-list env-name t)
+        (add-to-list 'result (if (cdr pair)
+                                 (format "%s=%s" (car pair) (cdr pair))
+                               ;; Plain env name is the syntax for unsetting vars
+                               env-name) t)))
+    result))
 
 (defun envrc--clear (buf)
   "Remove any effects of `envrc-mode' from BUF."
