@@ -531,7 +531,7 @@ Shortcuts tramp caching direnv sets the variable `exec-path'."
     "direnv_load" "direnv_version" "dotenv" "dotenv_if_exists"
     "env_vars_required" "expand_path" "fetchurl" "find_up" "has" "join_args"
     "layout" "load_prefix" "log_error" "log_status" "on_git_branch" "path_add"
-    "path_rm" "rvm" "semver_search" "source_env" "source_env_if_exists"
+    "path_rm" "require_allowed" "rvm" "semver_search" "source_env" "source_env_if_exists"
     "source_up" "source_up_if_exists" "source_url" "strict_env" "unstrict_env"
     "use" "use_flake" "use_flox" "use_guix" "use_nix" "use_vim" "user_rel_path"
     "watch_dir" "watch_file")
