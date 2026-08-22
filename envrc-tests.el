@@ -35,7 +35,7 @@
 
 
 (defun envrc-tests--exec (&rest args)
-  (should (apply 'call-process envrc-direnv-executable nil nil nil args)))
+  (should (zerop (apply 'call-process envrc-direnv-executable nil nil nil args))))
 
 (defmacro envrc-tests--with-extra-global-env-var (key val &rest body)
   "Temporarily set var KEY to VAL in the global `process-environment', while BODY is evaluated."
@@ -53,13 +53,17 @@
   (declare (indent 1))
   (let ((passed (cl-gensym)))
     `(let* ((default-directory (make-temp-file "envrc" t))
+            (envrc-global-mode nil)
+            (envrc-async nil)
             (envrc-debug t)
             ,passed
             (,var default-directory))
        (unwind-protect
            (progn
-             (when (get-buffer "*envrc-debug*")
-               (kill-buffer "*envrc-debug*"))
+             (when-let ((buf (get-buffer "*envrc-debug*")))
+               (kill-buffer buf))
+             (when-let ((buf (get-buffer (envrc--direnv-buffer-name (file-name-as-directory default-directory)))))
+               (kill-buffer buf))
              ,@body
              (setq ,passed t))
          (unless ,passed
@@ -89,7 +93,7 @@
     (with-temp-buffer
       (envrc-mode 1)
       (should (not (local-variable-p 'process-environment)))
-      (should (eq envrc--status 'error)))))
+      (should (eq envrc--status 'denied)))))
 
 (ert-deftest envrc-setting-propagates-when-mode-enabled ()
   "Pick up existing .envrc at mode startup."
@@ -131,7 +135,7 @@
       (should (eq envrc--status 'on))
       (envrc-deny)
       (should (not (local-variable-p 'process-environment)))
-      (should (eq envrc--status 'error)))))
+      (should (eq envrc--status 'denied)))))
 
 (ert-deftest envrc-reload-existing-buffer ()
   (envrc-tests--with-temp-directory _
@@ -181,9 +185,9 @@
         (should (local-variable-p 'process-environment))
         (should (equal "BAR" (getenv "FOO")))
         (envrc-reload)
-        (should (eq envrc--status 'error)))
+        (should (eq envrc--status 'denied)))
 
-      (should (eq envrc--status 'error))
+      (should (eq envrc--status 'denied))
       (should (not (local-variable-p 'process-environment))))))
 
 (ert-deftest envrc-remove-variable ()
@@ -217,8 +221,8 @@
         (envrc-tests--exec "allow")
         (with-temp-buffer
           ;; We expect a cache miss, and therefore a refresh
-          (envrc--debug "buffer is %S" (current-buffer))
           (envrc-mode 1)
+          (should (equal 'on envrc--status))
           (should (local-variable-p 'process-environment))
           (should (equal "BAZ" (getenv "FOO"))))
 
@@ -241,41 +245,55 @@
 ;;       (should (equal "BAR" (getenv "FOO"))))))
 (require 'eshell)
 
-(ert-deftest envrc-eshell-updates-environment-when-changing-directory ()
-  (let ((current-dir default-directory))
-    (eshell)
-    (envrc-tests--with-temp-directory envrc-dir
-      (with-temp-file ".envrc"
-        (insert "export FOO=BAR"))
 
-      (envrc-tests--exec "allow")
+(ert-deftest envrc-eshell-when-changing-directory ()
+  (let* ((non-env-dir (make-temp-file "envrc" t))
+         (default-directory non-env-dir))
+    (with-temp-buffer
+      (let ((eshell-buffer-name (buffer-name))
+            (envrc-update-on-eshell-directory-change t))
+        (eshell)
+        (envrc-mode 1)
+        (should (equal nil (getenv "FOO")))
+        (envrc-tests--with-temp-directory envrc-dir
+          (with-temp-file ".envrc"
+            (insert "export FOO=BAR"))
 
-      ;; envrc mode is not activated
-      (eshell/cd envrc-dir)
-      (should (equal nil (getenv "FOO")))
+          (envrc-tests--exec "allow")
 
-      ;; envrc mode is activated with option set to not update env on directory change
-      (eshell/cd current-dir)
-      (let ((envrc-update-on-eshell-directory-change nil))
-        (envrc-mode 1))
-      (eshell/cd envrc-dir)
-      (should (equal nil (getenv "FOO")))
+          (eshell/cd envrc-dir)
+          (should (equal "BAR" (getenv "FOO")))
 
-      ;; envrc mode is activated and updates environment with default options
-      (eshell/cd current-dir)
-      (envrc-mode -1)
-      (envrc-mode 1)
-      (eshell/cd envrc-dir)
-      (should (equal "BAR" (getenv "FOO")))
+          (eshell/cd non-env-dir)
+          (should (equal nil (getenv "FOO")))
 
-      ;; environment is cleared when exiting directory
-      (eshell/cd current-dir)
-      (should (equal nil (getenv "FOO")))
+          ;; environment is cleared when envrc-mode is disabled
+          (eshell/cd envrc-dir)
+          (envrc-mode -1)
+          (should (equal nil (getenv "FOO"))))))))
 
-      ;; environment is cleared when envrc-mode is disabled
-      (eshell/cd envrc-dir)
-      (envrc-mode -1)
-      (should (equal nil (getenv "FOO"))))))
+
+(ert-deftest envrc-eshell-when-ignoring-changing-directory ()
+  (let* ((non-env-dir (make-temp-file "envrc" t))
+         (default-directory non-env-dir))
+    (with-temp-buffer
+      (let ((eshell-buffer-name (buffer-name))
+            (envrc-update-on-eshell-directory-change nil))
+        (eshell)
+        (envrc-mode 1)
+        (should (equal nil (getenv "FOO")))
+        (envrc-tests--with-temp-directory envrc-dir
+          (with-temp-file ".envrc"
+            (insert "export FOO=BAR"))
+
+          (envrc-tests--exec "allow")
+
+          (eshell/cd envrc-dir)
+          (should (equal nil (getenv "FOO")))
+
+          (eshell/cd non-env-dir)
+          (should (equal nil (getenv "FOO")))
+          )))))
 
 ;; TODO:
 ;; - Setting exec-path and eshell-path-env
