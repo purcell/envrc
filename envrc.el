@@ -236,6 +236,7 @@ local variables.")
               (pcase envrc--status
                 (`on 'envrc-mode-line-on-face)
                 (`error 'envrc-mode-line-error-face)
+                (`denied 'envrc-mode-line-error-face)
                 (`none 'envrc-mode-line-none-face)))
         ;; Cache this detail to avoid overhead in redisplay, e.g. when scrolling
         (when (envrc--cache-locally-for 0.3
