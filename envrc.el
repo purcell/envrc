@@ -508,22 +508,24 @@ coresponding buffers."
               (buf (get-buffer bufname)))
     (get-buffer-process buf)))
 
-(defun envrc--get-current-env-or-run-direnv ()
+(defun envrc--get-current-env-or-run-direnv (&optional force)
   "Find the last exported env and apply it, or run direnv if necessary.
 According to `envrc-async', any resulting direnv invocation may block
 for a limited time, or indefinitely.
 
 If the global `process-environment' has changed since the last
 invocation of `direnv', also re-run direnv, because the changes can
-affect the results of direnv."
+affect the results of direnv.
+
+If FORCE is non-nil, then direnv will be run unconditionally."
   (cl-assert envrc-mode nil "must only be called from an `envrc-mode' buffer")
   (let ((orig-buffer (current-buffer))
         (async envrc-async))
-    (envrc--debug "envrc--get-current-env-or-run-direnv")
     (if (envrc--find-env-dir)
         (envrc--with-direnv-buffer
          (cl-assert (not (eq orig-buffer (current-buffer))))
-         (if (and envrc--direnv-status
+         (if (and (not force)
+                  envrc--direnv-status
                   (eq (default-value 'process-environment)
                       envrc--direnv-global-process-environment))
              ;; Re-use the cached status directly
@@ -593,12 +595,13 @@ ARGS is as for `call-process'."
            (exit-code (envrc--call-process-with-global-env envrc-direnv-executable nil outbuf nil verb)))
       (if (zerop exit-code)
           (progn
-            (when-let ((buf (get-buffer (envrc--direnv-buffer-name env-dir))))
-              (kill-buffer buf)) ;; TODO, questionable
-            (envrc--get-current-env-or-run-direnv)
-            (kill-buffer outbuf))
+            (kill-buffer outbuf)
+            (envrc--get-current-env-or-run-direnv t))
         (display-buffer outbuf)
         (user-error "Error running direnv %s" verb)))))
+
+
+;;; Commands for end users
 
 (defun envrc-reload ()
   "Reload the current env."
