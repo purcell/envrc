@@ -387,6 +387,9 @@ also appear in PAIRS."
       (envrc--debug "reset environment to default"))))
 
 
+
+;;; Plumbing for running direnv
+
 ;; There is a direnv buffer for each loaded environment.  A direnv
 ;; process is started here as necessary, and its result is stored in
 ;; local variables in this buffer.  Subsequently-opened buffers in the
@@ -630,7 +633,7 @@ This can be useful if a .envrc has been deleted."
       (envrc--get-current-env-or-run-direnv))))
 
 (defun envrc-show-log ()
-  "Open envrc log buffer."
+  "Open direnv log buffer for this `envrc-mode' buffer."
   (interactive)
   (envrc--with-required-current-env env-dir
     (if-let* ((buffer (get-buffer (envrc--direnv-buffer-name env-dir))))
