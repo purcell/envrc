@@ -238,9 +238,11 @@ local variables.")
                 (`error 'envrc-mode-line-error-face)
                 (`denied 'envrc-mode-line-error-face)
                 (`none 'envrc-mode-line-none-face)))
-        ;; Cache this detail to avoid overhead in redisplay, e.g. when scrolling
-        (when (envrc--cache-locally-for 0.3
-                (envrc--direnv-running-p))
+        ;; Cache this detail to avoid overhead in redisplay, e.g. when scrolling,
+        ;; and don't display it at all for remote files
+        (when (and (not (file-remote-p default-directory))
+                   (envrc--cache-locally-for 0.3
+                     (envrc--direnv-running-p)))
           (list :propertize "*" 'face 'envrc-mode-line-running-face))
         "]"))
 
