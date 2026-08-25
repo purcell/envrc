@@ -81,6 +81,47 @@ binding your preferred prefix to `envrc-command-map` in
   (define-key envrc-mode-map (kbd "C-c e") 'envrc-command-map))
 ```
 
+## When and how often `direnv` is executed
+
+When `envrc-mode` is enabled for the first time in a particular
+`direnv` environment, `envrc.el` will run `direnv export`. Subsequent
+buffers will always re-use the resulting environment indefinitely,
+i.e. there is no implicit reloading of the `direnv` environment within
+Emacs. Use the command `envrc-reload` to reload the current
+environment explicitly as needed.
+
+## Blocking vs async loading of `direnv`
+
+By default, `envrc-mode` blocks Emacs until `direnv` has finished
+executing, which means that subsequent mode hooks will be guaranteed
+to see the desired local environment, and they can use it to find
+executables they need, like LSP servers or flymake tools. This is
+therefore a robust default with predictable results.
+
+*However*, in some cases (particularly with GUIX and Nix) `direnv`
+execution can sometimes be very slow, and it is undesirable to block
+Emacs for that long. For this purpose, `envrc.el` provides a variable
+called `envrc-async`.
+
+When set to `t` ("always"), Emacs will never be blocked by `direnv`
+execution, and will remain completely responsive. After `direnv` has run,
+the results will be quietly propagated to the corresponding buffers.
+
+Even with `envrc-async` set to `nil` (the default), if you find that
+Emacs is blocked on `direnv`, you can hit `C-g`, and then `direnv`
+execution will continue in the background, and its eventual result
+will still be propagated to the relevant `envrc-mode` buffers.
+
+As a further option, `envrc-async` can be set to a number of seconds:
+this then specifies a time limit for blocking Emacs waiting for
+`direnv`. After this time, execution will automatically continue in
+the background.
+
+When `direnv` is running asynchronously for the current buffer's
+environment, the `envrc-mode` mode-line lighter indicates this with a
+`*`.
+
+
 ## Troubleshooting
 
 If you find that a particular Emacs command isn't picking up the
