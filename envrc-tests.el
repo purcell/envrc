@@ -295,6 +295,59 @@
           (should (equal nil (getenv "FOO")))
           )))))
 
+
+(ert-deftest envrc-async-has-delayed-effect ()
+  (envrc-tests--with-temp-directory _
+    (let ((envrc-async t))
+      (with-temp-file ".envrc"
+        (insert "sleep 1\n")
+        (insert "export FOO=BAR\n"))
+      (envrc-tests--exec "allow")
+
+      (with-temp-buffer
+        (envrc-mode 1)
+        ;; No immediate effect
+        (should (not (local-variable-p 'process-environment)))
+        (should (equal nil (getenv "FOO")))
+        (should (equal envrc--status 'none))
+        (sleep-for 1.1)
+        (should (local-variable-p 'process-environment))
+        (should (equal "BAR" (getenv "FOO")))
+        (should (eq envrc--status 'on))))))
+
+(ert-deftest envrc-async-resolution-updates-all-buffers ()
+  (envrc-tests--with-temp-directory _
+    (let ((envrc-async t))
+      (with-temp-file ".envrc"
+        (insert "sleep 1\n")
+        (insert "export FOO=BAR\n"))
+      (envrc-tests--exec "allow")
+
+      (let (buf1)
+        (with-temp-buffer
+          (setq buf1 (current-buffer))
+          (envrc-mode 1)
+          (should (not (local-variable-p 'process-environment)))
+          (should (equal nil (getenv "FOO")))
+          (should (equal envrc--status 'none))
+
+          (with-temp-buffer
+            (envrc-mode 1)
+            (should (not (local-variable-p 'process-environment)))
+            (should (equal nil (getenv "FOO")))
+            (should (equal envrc--status 'none))
+
+            (sleep-for 1.1)
+            (should (local-variable-p 'process-environment))
+            (should (equal "BAR" (getenv "FOO")))
+            (should (eq envrc--status 'on))
+
+            (with-current-buffer buf1
+              (should (local-variable-p 'process-environment))
+              (should (equal "BAR" (getenv "FOO")))
+              (should (eq envrc--status 'on)))))))))
+
+
 ;; TODO:
 ;; - Setting exec-path and eshell-path-env
 
