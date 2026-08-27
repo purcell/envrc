@@ -46,15 +46,11 @@
 
 ;; TODO: special handling for DIRENV_* vars? exclude them? use them to safely reload more aggressively?
 ;; TODO: handle nil default-directory (rarely happens, but is possible)
-;; TODO: limit size of *direnv* buffer
 ;; TODO: special handling of compilation-environment?
 ;; TODO: handle use of "cd" and other changes of `default-directory' in a buffer over time?
-;; TODO: handle "allow" asynchronously?
 ;; TODO: describe env
 ;; TODO: click on mode lighter to get details
 ;; TODO: handle when direnv is not installed?
-;; TODO: provide a way to disable in certain projects?
-;; TODO: cleanup the cache?
 
 (require 'seq)
 (require 'json)
@@ -504,7 +500,7 @@ coresponding buffers."
                              (let ((inhibit-read-only t))
                                (insert (propertize "\n--- Standard error ---\n" 'face 'font-lock-comment-face))
                                (let ((initial-pos (point)))
-                                 (insert stdenv) ;; TODO insert "no output" if applicable
+                                 (insert stdenv)
                                  (goto-char (point-max))
                                  (let (ansi-color-context)
                                    (ansi-color-apply-on-region initial-pos (point)))
