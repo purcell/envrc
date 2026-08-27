@@ -42,6 +42,11 @@
 ;;    (with-eval-after-load 'envrc
 ;;      (define-key envrc-mode-map (kbd "C-c e") 'envrc-command-map))
 
+;; By default Emacs will be blocked while direnv environments are
+;; recomputed, but this behaviour can be altered by setting
+;; `envrc-async': see the documentation for that variable to
+;; understand what will work best for you.
+
 ;;; Code:
 
 ;; TODO: special handling for DIRENV_* vars? exclude them? use them to safely reload more aggressively?
