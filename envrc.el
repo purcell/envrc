@@ -150,6 +150,16 @@ To access `envrc-command-map' from this map, give it a prefix keybinding,
 e.g. (define-key envrc-mode-map (kbd \"C-c e\") \\='envrc-command-map)"
   :type '(restricted-sexp :match-alternatives (keymapp)))
 
+(easy-menu-define envrc-mode-menu envrc-command-map
+  "Envrc mode"
+  '("Envrc"
+    ["Show direnv log" envrc-show-log t :visible envrc-mode]
+    ["Allow" envrc-allow t :visible envrc-mode]
+    ["Deny" envrc-deny t :visible envrc-mode]
+    ["Reload" envrc-reload t :visible envrc-mode]))
+
+(easy-menu-add-item global-map '(menu-bar tools) envrc-mode-menu)
+
 (defcustom envrc-remote nil
   "Whether or not to enable direnv over TRAMP."
   :type 'boolean)
