@@ -630,16 +630,6 @@ ARGS is as for `call-process'."
   (interactive)
   (envrc--run-direnv "deny"))
 
-;; TODO....
-(defun envrc-reload-all ()
-  "Reload direnvs for all buffers.
-This can be useful if a .envrc has been deleted."
-  (interactive)
-  (envrc--debug "Invalidating cache for all envs")
-  (dolist (buf (envrc--mode-buffers))
-    (with-current-buffer buf
-      (envrc--get-current-env-or-run-direnv))))
-
 (defun envrc-show-log ()
   "Open direnv log buffer for this `envrc-mode' buffer."
   (interactive)

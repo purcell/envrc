@@ -69,8 +69,7 @@ e.g. for certain modes or projects, because compilation and other
 buffers might not get set up with the right environment.)
 
 Regarding interaction with the mode, see `envrc-mode-map`, and the
-commands `envrc-reload`, `envrc-allow` and `envrc-deny`. (There's also
-`envrc-reload-all` as a "nuclear" reset, for now!)
+commands `envrc-reload`, `envrc-allow` and `envrc-deny`.
 
 In particular, you can enable keybindings for the above commands by
 binding your preferred prefix to `envrc-command-map` in
