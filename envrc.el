@@ -266,6 +266,18 @@ called `cd'"
     ;; `locate-dominating-file' appears to sometimes return abbreviated paths, e.g. with ~
     (expand-file-name env-dir)))
 
+(defmacro envrc--with-required-current-env (varname &rest body)
+  "With VARNAME set to the current env dir path, execute BODY.
+If there is no current env dir, abort with a user error."
+  (declare (indent 1))
+  `(progn
+     (unless envrc-mode
+       (user-error "This is not an envrc-mode buffer"))
+     (unless envrc--env-dir
+       (user-error "No enclosing .envrc"))
+     (let ((,varname envrc--env-dir))
+       ,@body)))
+
 (define-derived-mode envrc--special-mode special-mode "Envrc Special"
   "Special mode for internal envrc buffers.")
 
@@ -563,19 +575,6 @@ If FORCE is non-nil, then direnv will be run unconditionally."
                 (and (buffer-live-p b)
                      (with-current-buffer b envrc-mode)))
               (buffer-list)))
-
-(defmacro envrc--with-required-current-env (varname &rest body)
-  "With VARNAME set to the current env dir path, execute BODY.
-If there is no current env dir, abort with a user error."
-  (declare (indent 1))
-  (cl-assert (symbolp varname))
-  `(progn
-     (unless envrc-mode
-       (user-error "This is not an envrc-mode buffer"))
-     (unless envrc--env-dir
-       (user-error "No enclosing .envrc"))
-     (let ((,varname envrc--env-dir))
-       ,@body)))
 
 (defun envrc--call-process-with-global-env (&rest args)
   "Like `call-process', but always use the global process environment.
