@@ -226,6 +226,10 @@ One of \\='(none on error).")
 If set, this will override `tramp-remote-path' via connection
 local variables.")
 
+(defvar-local envrc--env-dir nil
+  "The env dir for this buffer.
+To avoid repeated filesystem traversals, this is cached in each buffer.")
+
 ;;; Internals
 
 (defun envrc--lighter ()
@@ -429,85 +433,85 @@ executed.")
 (defun envrc--direnv-broadcast-status ()
   "From this direnv buffer, propagate the status to all `envrc-mode' buffers."
   (dolist (buf (envrc--mode-buffers))
-    (when (string= default-directory (with-current-buffer buf (envrc--find-env-dir)))
+    (when (string= default-directory (with-current-buffer buf envrc--env-dir))
       (envrc--direnv-apply-status-to buf))))
 
 (defun envrc--direnv-export ()
   "Run direnv asynchronously in the process buffer for the current env.
 When the process has exited, apply the results to the environment in all
 coresponding buffers."
-  (envrc--with-direnv-buffer
-   (message "Running direnv in %s" default-directory)
-   ;; Deal with any existing invocation first
-   (when-let* ((proc (get-buffer-process (current-buffer))))
-     ;; First ensure it will not overwrite the status vars
-     (set-process-sentinel proc nil)
-     (envrc--debug "cancelled previous direnv invocation")
-     (kill-process proc))
+  (cl-assert (string-match-p "^\\*envrc-direnv" (buffer-name (current-buffer))))
+  (message "Running direnv in %s" default-directory)
+  ;; Deal with any existing invocation first
+  (when-let* ((proc (get-buffer-process (current-buffer))))
+    ;; First ensure it will not overwrite the status vars
+    (set-process-sentinel proc nil)
+    (envrc--debug "cancelled previous direnv invocation")
+    (kill-process proc))
 
-   ;; Record the environment in which we're running direnv
-   (setq envrc--direnv-global-process-environment (default-value 'process-environment))
-   (setq envrc--direnv-status 'running)
-   (envrc--direnv-broadcast-status)
-   ;; First check whether direnv is enabled here
-   (pcase (let-alist (with-temp-buffer
-                       (let ((inhibit-read-only t))
-                         (when (zerop (process-file envrc-direnv-executable nil t nil "status" "--json"))
-                           (goto-char (point-min))
-                           (json-read-object))))
-            .state.foundRC.allowed)
-     ((pred null)
-      (setq envrc--direnv-status 'none
-            envrc--direnv-result nil)
-      (envrc--direnv-broadcast-status))
-     ((or 1 2) (setq envrc--direnv-status 'denied
-                     envrc--direnv-result nil)
-      (envrc--direnv-broadcast-status))
-     (0 (let ((stdenv-buf (generate-new-buffer " *envrc-temp-" t)))
-          (kill-region (point-min) (point-max))
-          ;; todo tramp? e.g. start-file-process
-          (make-process
-           :name "direnv"
-           :buffer (current-buffer)
-           :command (list envrc-direnv-executable "export" "json")
-           :stderr stdenv-buf
-           :sentinel (lambda (proc event)
-                       (with-current-buffer (process-buffer proc)
-                         (if (string-equal event "finished\n")
-                             (progn
-                               (envrc--debug "direnv finished")
-                               (save-excursion
-                                 (goto-char (point-min))
-                                 (setq envrc--direnv-result (let ((json-key-type 'string))
-                                                              (json-read-object))
-                                       envrc--direnv-status 'success)
-                                 ;; TODO: set env locally here too, to allow efficient direnv reload?
-                                 (when envrc-show-summary-in-minibuffer
-                                   (envrc--show-summary envrc--direnv-result default-directory))))
-                           ;; Process signalled or exited with failure
-                           (envrc--debug "direnv exited: %s" event)
-                           (setq envrc--direnv-status 'error
-                                 envrc--direnv-result nil))
-                         (unless (process-live-p proc)
-                           (setq envrc--direnv-exit-status (process-exit-status proc))
-                           ;; Append colourised stderr text if we're done
-                           (let ((stdenv (with-current-buffer stdenv-buf (buffer-string))))
-                             (kill-buffer stdenv-buf)
-                             (let ((inhibit-read-only t))
-                               (insert (propertize "\n--- Standard error ---\n" 'face 'font-lock-comment-face))
-                               (let ((initial-pos (point)))
-                                 (insert stdenv)
-                                 (goto-char (point-max))
-                                 (let (ansi-color-context)
-                                   (ansi-color-apply-on-region initial-pos (point)))
-                                 (add-face-text-property initial-pos (point)
-                                                         (if (eq envrc--direnv-status 'success) 'success 'error)))))
-                           ;; Apply the environment to all relevant buffers
-                           (envrc--direnv-broadcast-status)))))))
+  ;; Record the environment in which we're running direnv
+  (setq envrc--direnv-global-process-environment (default-value 'process-environment))
+  (setq envrc--direnv-status 'running)
+  (envrc--direnv-broadcast-status)
+  ;; First check whether direnv is enabled here
+  (pcase (let-alist (with-temp-buffer
+                      (let ((inhibit-read-only t))
+                        (when (zerop (process-file envrc-direnv-executable nil t nil "status" "--json"))
+                          (goto-char (point-min))
+                          (json-read-object))))
+           .state.foundRC.allowed)
+    ((pred null)
+     (setq envrc--direnv-status 'none
+           envrc--direnv-result nil)
+     (envrc--direnv-broadcast-status))
+    ((or 1 2) (setq envrc--direnv-status 'denied
+                    envrc--direnv-result nil)
+     (envrc--direnv-broadcast-status))
+    (0 (let ((stdenv-buf (generate-new-buffer " *envrc-temp-" t)))
+         (kill-region (point-min) (point-max))
+         ;; todo tramp? e.g. start-file-process
+         (make-process
+          :name "direnv"
+          :buffer (current-buffer)
+          :command (list envrc-direnv-executable "export" "json")
+          :stderr stdenv-buf
+          :sentinel (lambda (proc event)
+                      (with-current-buffer (process-buffer proc)
+                        (if (string-equal event "finished\n")
+                            (progn
+                              (envrc--debug "direnv finished")
+                              (save-excursion
+                                (goto-char (point-min))
+                                (setq envrc--direnv-result (let ((json-key-type 'string))
+                                                             (json-read-object))
+                                      envrc--direnv-status 'success)
+                                ;; TODO: set env locally here too, to allow efficient direnv reload?
+                                (when envrc-show-summary-in-minibuffer
+                                  (envrc--show-summary envrc--direnv-result default-directory))))
+                          ;; Process signalled or exited with failure
+                          (envrc--debug "direnv exited: %s" event)
+                          (setq envrc--direnv-status 'error
+                                envrc--direnv-result nil))
+                        (unless (process-live-p proc)
+                          (setq envrc--direnv-exit-status (process-exit-status proc))
+                          ;; Append colourised stderr text if we're done
+                          (let ((stdenv (with-current-buffer stdenv-buf (buffer-string))))
+                            (kill-buffer stdenv-buf)
+                            (let ((inhibit-read-only t))
+                              (insert (propertize "\n--- Standard error ---\n" 'face 'font-lock-comment-face))
+                              (let ((initial-pos (point)))
+                                (insert stdenv)
+                                (goto-char (point-max))
+                                (let (ansi-color-context)
+                                  (ansi-color-apply-on-region initial-pos (point)))
+                                (add-face-text-property initial-pos (point)
+                                                        (if (eq envrc--direnv-status 'success) 'success 'error)))))
+                          ;; Apply the environment to all relevant buffers
+                          (envrc--direnv-broadcast-status)))))))
 
-     (_
-      ;; Assertion for future unhandled values
-      (error "Unknown direnv foundRC state")))))
+    (_
+     ;; Assertion for future unhandled values
+     (error "Unknown direnv foundRC state"))))
 
 (defun envrc--get-current-env-or-run-direnv (&optional force)
   "Find the last exported env and apply it, or run direnv if necessary.
@@ -522,7 +526,8 @@ If FORCE is non-nil, then direnv will be run unconditionally."
   (cl-assert envrc-mode nil "must only be called from an `envrc-mode' buffer")
   (let ((orig-buffer (current-buffer))
         (async envrc-async))
-    (if (envrc--find-env-dir)
+    (setq-local envrc--env-dir (envrc--find-env-dir))
+    (if envrc--env-dir
         (envrc--with-direnv-buffer
          (cl-assert (not (eq orig-buffer (current-buffer))))
          (if (and (not force)
@@ -541,7 +546,7 @@ If FORCE is non-nil, then direnv will be run unconditionally."
            (unless (eq t async)
              (let ((waited 0)
                    (step 0.2))
-               (ignore-error quit        ; Stop waiting upon C-g
+               (ignore-error quit       ; Stop waiting upon C-g
                  (while (and (eq 'running envrc--direnv-status)
                              (or (null async) (< waited async)))
                    (sit-for step)
@@ -564,10 +569,13 @@ If FORCE is non-nil, then direnv will be run unconditionally."
 If there is no current env dir, abort with a user error."
   (declare (indent 1))
   (cl-assert (symbolp varname))
-  `(let ((,varname (envrc--find-env-dir)))
-     (unless ,varname
+  `(progn
+     (unless envrc-mode
+       (user-error "This is not an envrc-mode buffer"))
+     (unless envrc--env-dir
        (user-error "No enclosing .envrc"))
-     ,@body))
+     (let ((,varname envrc--env-dir))
+       ,@body)))
 
 (defun envrc--call-process-with-global-env (&rest args)
   "Like `call-process', but always use the global process environment.
