@@ -293,6 +293,7 @@ not enabled in it."
   "At the end of `special-mode' buffer NAME, execute BODY.
 To avoid confusion, `envrc-mode' is explicitly disabled in the buffer."
   (declare (indent 1))
+  (cl-assert (stringp name))
   `(envrc--with-special-buffer ,name
      (goto-char (point-max))
      ,@body))
