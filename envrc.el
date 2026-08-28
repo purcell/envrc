@@ -496,8 +496,9 @@ coresponding buffers."
                             (envrc--debug "direnv finished")
                             (save-excursion
                               (goto-char (point-min))
-                              (setq envrc--direnv-result (let ((json-key-type 'string))
-                                                           (json-read-object))
+                              (setq envrc--direnv-result (unless (zerop (buffer-size))
+                                                           (let ((json-key-type 'string))
+                                                             (json-read-object)))
                                     envrc--direnv-status 'success)
                               ;; TODO: set env locally here too, to allow efficient direnv reload?
                               (when envrc-show-summary-in-minibuffer
