@@ -147,13 +147,14 @@ See `envrc-mode-map' for how to assign a prefix binding to these."
 
 (defcustom envrc-mode-map (make-sparse-keymap)
   "Keymap for `envrc-mode'.
-To access `envrc-command-map' from this map, give it a prefix keybinding,
-e.g. (define-key envrc-mode-map (kbd \"C-c e\") \\='envrc-command-map)"
+To access bindings in variable `envrc-command-map' from this map, give
+it a prefix keybinding, e.g. (define-key envrc-mode-map (kbd \"C-c e\")
+\\='envrc-command-map)"
   :type '(restricted-sexp :match-alternatives (keymapp)))
 
 (easy-menu-define envrc-mode-menu envrc-command-map
-  "Envrc mode"
-  '("Envrc"
+  "Envrc mode menu."
+  '("Direnv (envrc)"
     ["Show direnv log" envrc-show-log t :visible envrc-mode]
     ["Allow" envrc-allow t :visible envrc-mode]
     ["Deny" envrc-deny t :visible envrc-mode]
@@ -655,8 +656,8 @@ in a temp buffer.  ARGS is as for ORIG."
     (apply orig args)))
 
 (defun envrc-propagate-tramp-environment (buf)
-  "Advice function to propagate `tramp-remote-path' and
-`tramp-remote-process-environment' from buffer local values."
+  "Advice function to propagate tramp vars into local values in BUF.
+`tramp-remote-path' and `tramp-remote-process-environment' are propagated."
   (when envrc-mode
     (let ((cur-path envrc--remote-path)
           (cur-env tramp-remote-process-environment))
@@ -666,8 +667,7 @@ in a temp buffer.  ARGS is as for ORIG."
   buf)
 
 (defun envrc-get-remote-path (fn vec)
-  "Advice function to wrap FN (`tramp-get-remote-path'),
-with its argument VEC.
+  "Advice function to wrap FN (`tramp-get-remote-path') with its argument VEC.
 Shortcuts tramp caching direnv sets the variable `exec-path'."
   (with-current-buffer (tramp-get-connection-buffer vec)
     (or envrc--remote-path
