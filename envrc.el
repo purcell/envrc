@@ -301,10 +301,9 @@ To avoid confusion, `envrc-mode' is explicitly disabled in the buffer."
   "A version of `message' which does nothing if `envrc-debug' is nil.
 MSG and ARGS are as for that function."
   (when envrc-debug
-    (let ((calling-buffer (current-buffer)))
+    (let ((text (format "[%s] %s" (current-buffer) (format msg args))))
       (envrc--at-end-of-special-buffer "*envrc-debug*"
-        (insert (format "[%s] " (buffer-name calling-buffer))
-                (apply 'format msg args))
+        (insert text)
         (newline)))))
 
 (defun envrc--summarise-changes (items)
