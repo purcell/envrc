@@ -491,38 +491,45 @@ coresponding buffers."
         :stderr stdenv-buf
         :sentinel (lambda (proc event)
                     (with-current-buffer (process-buffer proc)
-                      (if (string-equal event "finished\n")
+                      (condition-case err
                           (progn
-                            (envrc--debug "direnv finished")
-                            (save-excursion
-                              (goto-char (point-min))
-                              (setq envrc--direnv-result (unless (zerop (buffer-size))
-                                                           (let ((json-key-type 'string))
-                                                             (json-read-object)))
-                                    envrc--direnv-status 'success)
-                              ;; TODO: set env locally here too, to allow efficient direnv reload?
-                              (when envrc-show-summary-in-minibuffer
-                                (envrc--show-summary envrc--direnv-result default-directory))))
-                        ;; Process signalled or exited with failure
-                        (envrc--debug "direnv exited: %s" event)
-                        (setq envrc--direnv-status 'error
-                              envrc--direnv-result nil))
-                      (unless (process-live-p proc)
-                        (setq envrc--direnv-exit-status (process-exit-status proc))
-                        ;; Append colourised stderr text if we're done
-                        (let ((stdenv (with-current-buffer stdenv-buf (buffer-string))))
-                          (kill-buffer stdenv-buf)
-                          (let ((inhibit-read-only t))
-                            (insert (propertize "\n--- Standard error ---\n" 'face 'font-lock-comment-face))
-                            (let ((initial-pos (point)))
-                              (insert stdenv)
-                              (goto-char (point-max))
-                              (let (ansi-color-context)
-                                (ansi-color-apply-on-region initial-pos (point)))
-                              (add-face-text-property initial-pos (point)
-                                                      (if (eq envrc--direnv-status 'success) 'success 'error)))))
-                        ;; Apply the environment to all relevant buffers
-                        (envrc--direnv-broadcast-status)))))))
+                            (if (string-equal event "finished\n")
+                                (progn
+                                  (envrc--debug "direnv finished")
+                                  (save-excursion
+                                    (goto-char (point-min))
+                                    (setq envrc--direnv-result (unless (zerop (buffer-size))
+                                                                 (let ((json-key-type 'string))
+                                                                   (json-read-object)))
+                                          envrc--direnv-status 'success)
+                                    ;; TODO: set env locally here too, to allow efficient direnv reload?
+                                    (when envrc-show-summary-in-minibuffer
+                                      (envrc--show-summary envrc--direnv-result default-directory))))
+                              ;; Process signalled or exited with failure
+                              (envrc--debug "direnv exited: %s" event)
+                              (setq envrc--direnv-status 'error
+                                    envrc--direnv-result nil))
+                            (unless (process-live-p proc)
+                              (setq envrc--direnv-exit-status (process-exit-status proc))
+                              ;; Append colourised stderr text if we're done
+                              (let ((stdenv (with-current-buffer stdenv-buf (buffer-string))))
+                                (kill-buffer stdenv-buf)
+                                (let ((inhibit-read-only t))
+                                  (insert (propertize "\n--- Standard error ---\n" 'face 'font-lock-comment-face))
+                                  (let ((initial-pos (point)))
+                                    (insert stdenv)
+                                    (goto-char (point-max))
+                                    (let (ansi-color-context)
+                                      (ansi-color-apply-on-region initial-pos (point)))
+                                    (add-face-text-property initial-pos (point)
+                                                            (if (eq envrc--direnv-status 'success) 'success 'error)))))
+                              ;; Apply the environment to all relevant buffers
+                              (envrc--direnv-broadcast-status)))
+                        (error
+                         (envrc--debug "Sentinel died with error: %s" err)
+                         (setq envrc--direnv-status 'error
+                               envrc--direnv-result nil)
+                         (envrc--direnv-broadcast-status))))))))
 
     (_
      ;; Assertion for future unhandled values
