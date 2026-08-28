@@ -271,7 +271,7 @@ cached list of known directories.
 Regardless of buffer file name, we always use
 `default-directory': the two should always match, unless the user
 called `cd'"
-  (when-let ((env-dir (locate-dominating-file default-directory #'envrc--env-dir-p)))
+  (when-let* ((env-dir (locate-dominating-file default-directory #'envrc--env-dir-p)))
     ;; `locate-dominating-file' appears to sometimes return abbreviated paths, e.g. with ~
     (expand-file-name env-dir)))
 
@@ -424,7 +424,7 @@ also appear in PAIRS."
   "Parsed output of last direnv invocation in the envrc buffer.")
 (defvar-local envrc--direnv-status nil
   "Status of the process in the envrc buffer.
-Either 'success or 'error.  If nil, then direnv has not yet been
+Either \='success or \='error.  If nil, then direnv has not yet been
 executed.")
 (defvar-local envrc--direnv-exit-status nil
   "Exit code of the last direnv invocation.")
@@ -438,7 +438,7 @@ executed.")
                       (_ envrc--direnv-status))))
 
 (defun envrc--direnv-broadcast-status ()
-  "From the current direnv buffer, propagate the status to all `envrc-mode' buffers."
+  "From this direnv buffer, propagate the status to all `envrc-mode' buffers."
   (dolist (buf (envrc--mode-buffers))
     (when (string= default-directory (with-current-buffer buf (envrc--find-env-dir)))
       (envrc--direnv-apply-status-to buf))))
@@ -450,7 +450,7 @@ coresponding buffers."
   (envrc--with-direnv-buffer
    (message "Running direnv in %s" default-directory)
    ;; Deal with any existing invocation first
-   (when-let ((proc (get-buffer-process (current-buffer))))
+   (when-let* ((proc (get-buffer-process (current-buffer))))
      ;; First ensure it will not overwrite the status vars
      (set-process-sentinel proc nil)
      (envrc--debug "cancelled previous direnv invocation")
@@ -557,7 +557,7 @@ If FORCE is non-nil, then direnv will be run unconditionally."
            (unless (eq t async)
              (let ((waited 0)
                    (step 0.2))
-               (ignore-error 'quit        ; Stop waiting upon C-g
+               (ignore-error quit        ; Stop waiting upon C-g
                  (while (and (get-buffer-process (current-buffer))
                              (or (null async) (< waited async)))
                    (sit-for step)
@@ -596,9 +596,9 @@ ARGS is as for `call-process'."
     (apply 'process-file args)))
 
 (defun envrc--reset-direnv-buffer (env-dir)
-  (when-let ((buf (get-buffer (envrc--direnv-buffer-name env-dir))))
+  (when-let* ((buf (get-buffer (envrc--direnv-buffer-name env-dir))))
     (with-current-buffer buf
-      (when-let ((proc (get-buffer-process (current-buffer))))
+      (when-let* ((proc (get-buffer-process (current-buffer))))
         (set-process-sentinel proc nil)
         (kill-process proc))
       (setq envrc--direnv-result nil
