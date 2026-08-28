@@ -596,15 +596,6 @@ ARGS is as for `call-process'."
         (process-environment (default-value 'process-environment)))
     (apply 'process-file args)))
 
-(defun envrc--reset-direnv-buffer (env-dir)
-  (when-let* ((buf (get-buffer (envrc--direnv-buffer-name env-dir))))
-    (with-current-buffer buf
-      (when-let* ((proc (get-buffer-process (current-buffer))))
-        (set-process-sentinel proc nil)
-        (kill-process proc))
-      (setq envrc--direnv-result nil
-            envrc--direnv-status nil))))
-
 (defun envrc--run-direnv (verb)
   "Run direnv command named by VERB, then refresh current env."
   (envrc--with-required-current-env env-dir
