@@ -218,27 +218,15 @@ it a prefix keybinding, e.g. (define-key envrc-mode-map (kbd \"C-c e\")
   "Symbol indicating state of the current buffer's direnv.
 One of \\='(none on error).")
 
+(defvar-local envrc--running nil
+  "Whether direnv is known to be running for the current buffer's environment.")
+
 (defvar-local envrc--remote-path nil
   "Buffer local variable for remote path.
 If set, this will override `tramp-remote-path' via connection
 local variables.")
 
 ;;; Internals
-
-(defmacro envrc--cache-locally-for (period &rest body)
-  "Cache the result of BODY for PERIOD seconds in a buffer-local value."
-  (declare (indent 1))
-  (let ((cache-var (gensym "envrc-cached-"))
-        (cached-at-var (gensym "envrc-cached-at-"))
-        (period-var (gensym "envrc-cache-period-")))
-    `(let ((,period-var ,period))
-       (if (and (boundp ',cached-at-var)
-                (<= ,period-var (decoded-time-period (time-since ,cached-at-var))))
-           ,cache-var
-         (let ((val (progn ,@body)))
-           (setq-local ,cache-var val
-                       ,cached-at-var (current-time))
-           val)))))
 
 (defun envrc--lighter ()
   "Return a colourised version of `envrc--status' for use in the mode line."
@@ -252,9 +240,7 @@ local variables.")
                 (`none 'envrc-mode-line-none-face)))
         ;; Cache this detail to avoid overhead in redisplay, e.g. when scrolling,
         ;; and don't display it at all for remote files
-        (when (and (not (file-remote-p default-directory))
-                   (envrc--cache-locally-for 0.3
-                     (envrc--direnv-running-p)))
+        (when envrc--running
           (list :propertize "*" 'face 'envrc-mode-line-running-face))
         "]"))
 
@@ -366,39 +352,41 @@ also appear in PAIRS."
 (defun envrc--apply (buf result)
   "Update BUF with RESULT, which is a result of `envrc--direnv-export'."
   (with-current-buffer buf
-    (setq-local envrc--status (if (listp result) 'on result))
-    (envrc--clear buf)
-    (envrc--debug "applying %s" result)
-    (if (listp result)
-        (let* ((remote (when-let* ((fn (or (buffer-file-name buf) default-directory)))
-                         (file-remote-p fn)))
-               (env (envrc--merged-environment
-                     (default-value (if remote
-                                        'tramp-remote-process-environment
-                                      'process-environment))
-                     result))
-               (path (getenv-internal "PATH" env))
-               (parsed-path (parse-colon-path path)))
-          (if remote
-              (progn
-                (setq-local tramp-remote-process-environment env)
-                (envrc--debug "applied merged remote process environment"))
-            (setq-local process-environment env)
-            (envrc--debug "applied merged process environment"))
-          ;; Get PATH from the merged environment: direnv may not have changed it
-          (if remote
-              (setq-local envrc--remote-path parsed-path)
-            (setq-local exec-path parsed-path))
-          (cond ((derived-mode-p 'eshell-mode)
-                 (if (fboundp 'eshell-set-path)
-                     (eshell-set-path path)
-                   (setq-local eshell-path-env path)))
-                ((derived-mode-p 'Info-mode)
-                 (when-let* ((info-path (getenv-internal "INFOPATH" env)))
-                   (setq-local Info-directory-list
-                               (append (seq-filter #'identity (parse-colon-path info-path))
-                                       (default-value 'Info-directory-list)))))))
-      (envrc--debug "reset environment to default"))))
+    (setq-local envrc--running (eq result 'running))
+    (unless envrc--running
+      (setq-local envrc--status (if (listp result) 'on result))
+      (envrc--clear buf)
+      (envrc--debug "applying %s" result)
+      (if (listp result)
+          (let* ((remote (when-let* ((fn (or (buffer-file-name buf) default-directory)))
+                           (file-remote-p fn)))
+                 (env (envrc--merged-environment
+                       (default-value (if remote
+                                          'tramp-remote-process-environment
+                                        'process-environment))
+                       result))
+                 (path (getenv-internal "PATH" env))
+                 (parsed-path (parse-colon-path path)))
+            (if remote
+                (progn
+                  (setq-local tramp-remote-process-environment env)
+                  (envrc--debug "applied merged remote process environment"))
+              (setq-local process-environment env)
+              (envrc--debug "applied merged process environment"))
+            ;; Get PATH from the merged environment: direnv may not have changed it
+            (if remote
+                (setq-local envrc--remote-path parsed-path)
+              (setq-local exec-path parsed-path))
+            (cond ((derived-mode-p 'eshell-mode)
+                   (if (fboundp 'eshell-set-path)
+                       (eshell-set-path path)
+                     (setq-local eshell-path-env path)))
+                  ((derived-mode-p 'Info-mode)
+                   (when-let* ((info-path (getenv-internal "INFOPATH" env)))
+                     (setq-local Info-directory-list
+                                 (append (seq-filter #'identity (parse-colon-path info-path))
+                                         (default-value 'Info-directory-list)))))))
+        (envrc--debug "reset environment to default")))))
 
 
 
@@ -459,6 +447,8 @@ coresponding buffers."
 
    ;; Record the environment in which we're running direnv
    (setq envrc--direnv-global-process-environment (default-value 'process-environment))
+   (setq envrc--direnv-status 'running)
+   (envrc--direnv-broadcast-status)
    ;; First check whether direnv is enabled here
    (pcase (let-alist (with-temp-buffer
                        (let ((inhibit-read-only t))
@@ -519,13 +509,6 @@ coresponding buffers."
       ;; Assertion for future unhandled values
       (error "Unknown direnv foundRC state")))))
 
-(defun envrc--direnv-running-p ()
-  "Return non nil if direnv is currently running for this buffer's env dir."
-  (when-let* ((dir (envrc--find-env-dir))
-              (bufname (envrc--direnv-buffer-name dir))
-              (buf (get-buffer bufname)))
-    (get-buffer-process buf)))
-
 (defun envrc--get-current-env-or-run-direnv (&optional force)
   "Find the last exported env and apply it, or run direnv if necessary.
 According to `envrc-async', any resulting direnv invocation may block
@@ -552,19 +535,19 @@ If FORCE is non-nil, then direnv will be run unconditionally."
                (envrc--direnv-apply-status-to orig-buffer))
            ;; Run direnv for the first time unless it's already running
            (envrc--debug "need to (re-)run direnv")
-           (if (get-buffer-process (current-buffer))
+           (if (eq 'running envrc--direnv-status)
                (envrc--debug "will wait for existing process")
              (envrc--direnv-export))
            (unless (eq t async)
              (let ((waited 0)
                    (step 0.2))
                (ignore-error quit        ; Stop waiting upon C-g
-                 (while (and (get-buffer-process (current-buffer))
+                 (while (and (eq 'running envrc--direnv-status)
                              (or (null async) (< waited async)))
                    (sit-for step)
                    (setq waited (+ waited step))))
                (envrc--debug "waited for %s" waited)
-               (unless envrc--direnv-status
+               (when (eq 'running envrc--direnv-status)
                  (message "direnv continuing async in %s" (buffer-name)))))))
       (envrc--debug "no current env dir")
       (envrc--apply orig-buffer 'none))))

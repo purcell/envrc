@@ -310,10 +310,12 @@
         (should (not (local-variable-p 'process-environment)))
         (should (equal nil (getenv "FOO")))
         (should (equal envrc--status 'none))
+        (should envrc--running)
         (sleep-for 1.1)
         (should (local-variable-p 'process-environment))
         (should (equal "BAR" (getenv "FOO")))
-        (should (eq envrc--status 'on))))))
+        (should (eq envrc--status 'on))
+        (should (not envrc--running))))))
 
 (ert-deftest envrc-async-resolution-updates-all-buffers ()
   (envrc-tests--with-temp-directory _
@@ -330,22 +332,26 @@
           (should (not (local-variable-p 'process-environment)))
           (should (equal nil (getenv "FOO")))
           (should (equal envrc--status 'none))
+          (should envrc--running)
 
           (with-temp-buffer
             (envrc-mode 1)
             (should (not (local-variable-p 'process-environment)))
             (should (equal nil (getenv "FOO")))
             (should (equal envrc--status 'none))
+            (should envrc--running)
 
             (sleep-for 1.1)
             (should (local-variable-p 'process-environment))
             (should (equal "BAR" (getenv "FOO")))
             (should (eq envrc--status 'on))
+            (should (not envrc--running))
 
             (with-current-buffer buf1
               (should (local-variable-p 'process-environment))
               (should (equal "BAR" (getenv "FOO")))
-              (should (eq envrc--status 'on)))))))))
+              (should (eq envrc--status 'on))
+              (should (not envrc--running)))))))))
 
 
 ;; TODO:
