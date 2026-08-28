@@ -38,9 +38,9 @@
   (should (zerop (apply 'call-process envrc-direnv-executable nil nil nil args))))
 
 (defmacro envrc-tests--with-extra-global-env-var (key val &rest body)
-  "Temporarily set var KEY to VAL in the global `process-environment', while BODY is evaluated."
+  "Evaluate BODY with var KEY set to VAL in the global `process-environment'."
   (declare (indent 2))
-  (let ((old-env (cl-gensym)))
+  (let ((old-env (gensym)))
     `(let ((,old-env (default-value 'process-environment)))
        (push (format "%s=%s" ,key ,val) (default-value 'process-environment))
        (unwind-protect
@@ -51,7 +51,7 @@
 (defmacro envrc-tests--with-temp-directory (var &rest body)
   "Create a temporary directory, bind it to VAR, make it current, and execute BODY."
   (declare (indent 1))
-  (let ((passed (cl-gensym)))
+  (let ((passed (gensym)))
     `(let* ((default-directory (make-temp-file "envrc" t))
             (envrc-global-mode nil)
             (envrc-async nil)
@@ -60,12 +60,12 @@
             (,var default-directory))
        (unwind-protect
            (progn
-             (when-let ((buf (get-buffer "*envrc-debug*")))
-               (kill-buffer buf))
-             (when-let ((buf (get-buffer (envrc--direnv-buffer-name (file-name-as-directory default-directory)))))
+             (when-let* ((buf (get-buffer "*envrc-debug*")))
                (kill-buffer buf))
              ,@body
              (setq ,passed t))
+         (when-let* ((buf (get-buffer (envrc--direnv-buffer-name (file-name-as-directory default-directory)))))
+           (kill-buffer buf))
          (unless ,passed
            (message "Debug output: %s"
                     (when (get-buffer "*envrc-debug*")
@@ -215,7 +215,7 @@
     (with-temp-buffer
       (envrc-mode 1)
       (should (equal "BAR" (getenv "FOO")))
-      (envrc-tests--with-extra-global-env-var (symbol-name (cl-gensym)) "blah"
+      (envrc-tests--with-extra-global-env-var (symbol-name (gensym)) "blah"
         (with-temp-file ".envrc"
           (insert "export FOO=BAZ"))
         (envrc-tests--exec "allow")
