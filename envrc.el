@@ -472,7 +472,7 @@ coresponding buffers."
      ((or 1 2) (setq envrc--direnv-status 'denied
                      envrc--direnv-result nil)
       (envrc--direnv-broadcast-status))
-     (0 (let ((stdenv-buf (generate-new-buffer " *envrc-temp*")))
+     (0 (let ((stdenv-buf (generate-new-buffer " *envrc-temp-" t)))
           (kill-region (point-min) (point-max))
           ;; todo tramp? e.g. start-file-process
           (make-process
