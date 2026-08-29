@@ -586,22 +586,12 @@ If FORCE is non-nil, then direnv will be run unconditionally."
                      (with-current-buffer b envrc-mode)))
               (buffer-list)))
 
-(defun envrc--call-process-with-global-env (&rest args)
-  "Like `call-process', but always use the global process environment.
-In particular, we ensure the default variable `exec-path' and
-`process-environment' are used.  This ensures an .envrc doesn't take
-`envrc-direnv-executable' out of our path.
-ARGS is as for `call-process'."
-  (let ((exec-path (default-value 'exec-path))
-        (process-environment (default-value 'process-environment)))
-    (apply 'process-file args)))
-
 (defun envrc--run-direnv (verb)
   "Run direnv command named by VERB, then refresh current env."
   (envrc--with-required-current-env env-dir
     (let* ((outbuf (get-buffer-create (format "*envrc-%s: %s*" verb env-dir)))
            (default-directory env-dir)
-           (exit-code (envrc--call-process-with-global-env envrc-direnv-executable nil outbuf nil verb)))
+           (exit-code (process-file envrc-direnv-executable nil outbuf nil verb)))
       (if (zerop exit-code)
           (progn
             (kill-buffer outbuf)
