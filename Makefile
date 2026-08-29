@@ -1,7 +1,7 @@
 EMACS ?= emacs
 
 # A space-separated list of required package names
-DEPS = seq inheritenv
+DEPS = inheritenv
 
 INIT_PACKAGES := "(progn \
   (require 'package) \
