@@ -360,6 +360,7 @@ also appear in PAIRS."
   (with-current-buffer buf
     (kill-local-variable 'exec-path)
     (kill-local-variable 'process-environment)
+    (kill-local-variable 'tramp-remote-process-environment)
     (kill-local-variable 'Info-directory-list)
     (when (derived-mode-p 'eshell-mode)
       (if (fboundp 'eshell-set-path)
