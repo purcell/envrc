@@ -182,7 +182,7 @@ it a prefix keybinding, e.g. (define-key envrc-mode-map (kbd \"C-c e\")
         (envrc--get-current-env-or-run-direnv)
         (when (and (derived-mode-p 'eshell-mode) envrc-update-on-eshell-directory-change)
           (add-hook 'eshell-directory-change-hook #'envrc--get-current-env-or-run-direnv nil t)))
-    (envrc--clear (current-buffer))
+    (envrc--clear)
     (remove-hook 'eshell-directory-change-hook #'envrc--get-current-env-or-run-direnv t)))
 
 ;;;###autoload
@@ -355,17 +355,16 @@ also appear in PAIRS."
                   pairs)
           process-env))
 
-(defun envrc--clear (buf)
-  "Remove any effects of `envrc-mode' from BUF."
-  (with-current-buffer buf
-    (kill-local-variable 'exec-path)
-    (kill-local-variable 'process-environment)
-    (kill-local-variable 'tramp-remote-process-environment)
-    (kill-local-variable 'Info-directory-list)
-    (when (derived-mode-p 'eshell-mode)
-      (if (fboundp 'eshell-set-path)
-          (eshell-set-path (butlast exec-path))
-        (kill-local-variable 'eshell-path-env)))))
+(defun envrc--clear ()
+  "Remove any effects of `envrc-mode' from this buffer."
+  (kill-local-variable 'exec-path)
+  (kill-local-variable 'process-environment)
+  (kill-local-variable 'tramp-remote-process-environment)
+  (kill-local-variable 'Info-directory-list)
+  (when (derived-mode-p 'eshell-mode)
+    (if (fboundp 'eshell-set-path)
+        (eshell-set-path (butlast exec-path))
+      (kill-local-variable 'eshell-path-env))))
 
 (defun envrc--apply (buf result)
   "Update BUF with RESULT, which is a result of `envrc--direnv-export'."
@@ -373,7 +372,7 @@ also appear in PAIRS."
     (setq-local envrc--running (eq result 'running))
     (unless envrc--running
       (setq-local envrc--status (if (listp result) 'on result))
-      (envrc--clear buf)
+      (envrc--clear)
       (envrc--debug "applying %s" result)
       (if (listp result)
           (let* ((remote (when-let* ((fn (or (buffer-file-name buf) default-directory)))
