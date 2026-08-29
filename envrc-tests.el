@@ -1,6 +1,6 @@
 ;;; envrc-tests.el --- Test suite for envrc          -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2022  Steve Purcell
+;; Copyright (C) 2022-2026  Steve Purcell
 
 ;; Author: Steve Purcell <steve@sanityinc.com>
 ;; Keywords:
