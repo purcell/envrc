@@ -547,7 +547,7 @@ coresponding buffers."
           (step 0.2))
       (ignore-error quit                ; Stop waiting upon C-g
         (while (and envrc--running (or (null envrc-async) (< waited envrc-async)))
-          (sit-for step)
+          (sleep-for step)
           (setq waited (+ waited step))))
       (envrc--debug "waited for %s" waited)
       (when envrc--running
