@@ -454,6 +454,14 @@ executed.")
 
 (defun envrc--direnv-set-status (status)
   "Save direnv STATUS locally and propagate it to relevant `envrc-mode' buffers."
+  (message "%s %s"
+           (propertize (format "direnv %s" (symbol-name status))
+                       'face
+                       (pcase status
+                         (`success 'success)
+                         (`error 'error)
+                         (`denied 'warning)))
+           (propertize (format "(%s)" (abbreviate-file-name default-directory)) 'face 'font-lock-comment-face))
   (setq envrc--direnv-status status)
   (dolist (buf (envrc--mode-buffers))
     (when (string= default-directory (with-current-buffer buf envrc--env-dir))
@@ -478,7 +486,6 @@ The text will be colourised according to the indicated process EXIT-STATUS."
 When the process has exited, apply the results to the environment in all
 coresponding buffers."
   (cl-assert (string-prefix-p "*envrc-direnv" (buffer-name (current-buffer))))
-  (message "Running direnv in %s" default-directory)
   ;; Deal with any existing invocation first
   (when-let* ((proc (get-buffer-process (current-buffer))))
     ;; First ensure it will not overwrite the status vars
