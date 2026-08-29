@@ -477,7 +477,7 @@ The text will be colourised according to the indicated process EXIT-STATUS."
   "Run direnv asynchronously in the process buffer for the current env.
 When the process has exited, apply the results to the environment in all
 coresponding buffers."
-  (cl-assert (string-match-p "^\\*envrc-direnv" (buffer-name (current-buffer))))
+  (cl-assert (string-prefix-p "*envrc-direnv" (buffer-name (current-buffer))))
   (message "Running direnv in %s" default-directory)
   ;; Deal with any existing invocation first
   (when-let* ((proc (get-buffer-process (current-buffer))))
