@@ -535,6 +535,20 @@ coresponding buffers."
      ;; Assertion for future unhandled values
      (error "Unknown direnv foundRC state"))))
 
+(defun envrc--maybe-wait ()
+  "If direnv is currently running, block if `envrc-async' says to."
+  (when (and envrc--running (not (eq t envrc-async)))
+    (let ((waited 0)
+          (step 0.2))
+      (ignore-error quit                ; Stop waiting upon C-g
+        (while (and envrc--running (or (null envrc-async) (< waited envrc-async)))
+          (sit-for step)
+          (setq waited (+ waited step))))
+      (envrc--debug "waited for %s" waited)
+      (when envrc--running
+        (message "direnv continuing async in %s"
+                 (envrc--direnv-buffer-name envrc--env-dir))))))
+
 (defun envrc--get-current-env-or-run-direnv (&optional force)
   "Find the last exported env and apply it, or run direnv if necessary.
 According to `envrc-async', any resulting direnv invocation may block
@@ -546,36 +560,26 @@ affect the results of direnv.
 
 If FORCE is non-nil, then direnv will be run unconditionally."
   (cl-assert envrc-mode nil "must only be called from an `envrc-mode' buffer")
-  (let ((orig-buffer (current-buffer))
-        (async envrc-async))
+  (let ((orig-buffer (current-buffer)))
     (setq-local envrc--env-dir (envrc--find-env-dir))
     (if envrc--env-dir
-        (envrc--with-direnv-buffer
-         (cl-assert (not (eq orig-buffer (current-buffer))))
-         (if (and (not force)
-                  envrc--direnv-status
-                  (eq (default-value 'process-environment)
-                      envrc--direnv-global-process-environment))
-             ;; Re-use the cached status directly
-             (progn
-               (envrc--debug "re-using cached direnv result")
-               (envrc--direnv-apply-status-to orig-buffer))
-           ;; Run direnv for the first time unless it's already running
-           (envrc--debug "need to (re-)run direnv")
-           (if (eq 'running envrc--direnv-status)
-               (envrc--debug "will wait for existing process")
-             (envrc--direnv-export))
-           (unless (eq t async)
-             (let ((waited 0)
-                   (step 0.2))
-               (ignore-error quit       ; Stop waiting upon C-g
-                 (while (and (eq 'running envrc--direnv-status)
-                             (or (null async) (< waited async)))
-                   (sit-for step)
-                   (setq waited (+ waited step))))
-               (envrc--debug "waited for %s" waited)
-               (when (eq 'running envrc--direnv-status)
-                 (message "direnv continuing async in %s" (buffer-name)))))))
+        (progn
+          (envrc--with-direnv-buffer
+           (cl-assert (not (eq orig-buffer (current-buffer))))
+           (if (and (not force)
+                    envrc--direnv-status
+                    (eq (default-value 'process-environment)
+                        envrc--direnv-global-process-environment))
+               ;; Re-use the cached status directly
+               (progn
+                 (envrc--debug "re-using cached direnv result")
+                 (envrc--direnv-apply-status-to orig-buffer))
+             ;; Run direnv for the first time unless it's already running
+             (envrc--debug "need to (re-)run direnv")
+             (if (eq 'running envrc--direnv-status)
+                 (envrc--debug "will wait for existing process")
+               (envrc--direnv-export))))
+          (envrc--maybe-wait))
       (envrc--debug "no current env dir")
       (envrc--apply orig-buffer 'none))))
 
