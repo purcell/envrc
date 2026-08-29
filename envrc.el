@@ -443,12 +443,6 @@ executed.")
                       (`success envrc--direnv-result)
                       (_ envrc--direnv-status))))
 
-(defun envrc--direnv-broadcast-status ()
-  "From this direnv buffer, propagate the status to all `envrc-mode' buffers."
-  (dolist (buf (envrc--mode-buffers))
-    (when (string= default-directory (with-current-buffer buf envrc--env-dir))
-      (envrc--direnv-apply-status-to buf))))
-
 (defun envrc--direnv-allowed-status-code ()
   "Get direnv's numeric code for the status of the found environment, if any."
   (let-alist
@@ -457,6 +451,13 @@ executed.")
           (goto-char (point-min))
           (json-read-object)))
     .state.foundRC.allowed))
+
+(defun envrc--direnv-set-status (status)
+  "Save direnv STATUS locally and propagate it to relevant `envrc-mode' buffers."
+  (setq envrc--direnv-status status)
+  (dolist (buf (envrc--mode-buffers))
+    (when (string= default-directory (with-current-buffer buf envrc--env-dir))
+      (envrc--direnv-apply-status-to buf))))
 
 (defun envrc--direnv-export ()
   "Run direnv asynchronously in the process buffer for the current env.
@@ -473,18 +474,13 @@ coresponding buffers."
 
   ;; Record the environment in which we're running direnv
   (setq envrc--direnv-global-process-environment (default-value 'process-environment))
-  (setq envrc--direnv-status 'running)
-  (envrc--direnv-broadcast-status)
+  (envrc--direnv-set-status 'running)
   ;; First check whether direnv is enabled here
   (pcase (envrc--direnv-allowed-status-code)
     ((pred null)
-     (setq envrc--direnv-status 'none
-           envrc--direnv-result nil)
-     (envrc--direnv-broadcast-status))
+     (envrc--direnv-set-status 'none))
     ((or 1 2)
-     (setq envrc--direnv-status 'denied
-           envrc--direnv-result nil)
-     (envrc--direnv-broadcast-status))
+     (envrc--direnv-set-status 'denied))
     (0
      (let ((stdenv-buf (generate-new-buffer " *envrc-temp-" t)))
        (kill-region (point-min) (point-max))
@@ -505,15 +501,14 @@ coresponding buffers."
                                     (goto-char (point-min))
                                     (setq envrc--direnv-result (unless (zerop (buffer-size))
                                                                  (let ((json-key-type 'string))
-                                                                   (json-read-object)))
-                                          envrc--direnv-status 'success)
+                                                                   (json-read-object))))
+                                    (envrc--direnv-set-status 'success)
                                     ;; TODO: set env locally here too, to allow efficient direnv reload?
                                     (when envrc-show-summary-in-minibuffer
                                       (envrc--show-summary envrc--direnv-result default-directory))))
                               ;; Process signalled or exited with failure
                               (envrc--debug "direnv exited: %s" event)
-                              (setq envrc--direnv-status 'error
-                                    envrc--direnv-result nil))
+                              (envrc--direnv-set-status 'error))
                             (unless (process-live-p proc)
                               (setq envrc--direnv-exit-status (process-exit-status proc))
                               ;; Append colourised stderr text if we're done
@@ -527,14 +522,10 @@ coresponding buffers."
                                     (let (ansi-color-context)
                                       (ansi-color-apply-on-region initial-pos (point)))
                                     (add-face-text-property initial-pos (point)
-                                                            (if (eq envrc--direnv-status 'success) 'success 'error)))))
-                              ;; Apply the environment to all relevant buffers
-                              (envrc--direnv-broadcast-status)))
+                                                            (if (eq envrc--direnv-status 'success) 'success 'error)))))))
                         (error
                          (envrc--debug "Sentinel died with error: %s" err)
-                         (setq envrc--direnv-status 'error
-                               envrc--direnv-result nil)
-                         (envrc--direnv-broadcast-status))))))))
+                         (envrc--direnv-set-status 'error))))))))
 
     (_
      ;; Assertion for future unhandled values
