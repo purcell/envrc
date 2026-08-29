@@ -53,9 +53,12 @@
 ;; TODO: handle nil default-directory (rarely happens, but is possible)
 ;; TODO: special handling of compilation-environment?
 ;; TODO: handle use of "cd" and other changes of `default-directory' in a buffer over time?
-;; TODO: describe env
 ;; TODO: click on mode lighter to get details
-;; TODO: handle when direnv is not installed?
+;; TODO: store merged environment in the direnv buffer rather than re-merging it elsewhere?
+;; TODO: envrc-direnv-mode with a keymap, r to reload etc.
+;; TODO: use direnv to find the env dir, to avoid possibility of mismatched logic?
+;; TODO: run incidental direnv commands in the env's main direnv buffer
+;; TODO: add hooks that will be invoked when the effective environment changes
 
 (require 'seq)
 (require 'json)
