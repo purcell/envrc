@@ -64,6 +64,7 @@
 (require 'cl-lib)
 (require 'diff-mode) ; for its faces
 (require 'inheritenv)
+(require 'let-alist)
 (eval-when-compile (require 'tramp))
 
 ;;; Custom vars and minor modes
