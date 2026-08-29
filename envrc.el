@@ -449,6 +449,15 @@ executed.")
     (when (string= default-directory (with-current-buffer buf envrc--env-dir))
       (envrc--direnv-apply-status-to buf))))
 
+(defun envrc--direnv-allowed-status-code ()
+  "Get direnv's numeric code for the status of the found environment, if any."
+  (let-alist
+      (with-temp-buffer
+        (when (zerop (process-file envrc-direnv-executable nil t nil "status" "--json"))
+          (goto-char (point-min))
+          (json-read-object)))
+    .state.foundRC.allowed))
+
 (defun envrc--direnv-export ()
   "Run direnv asynchronously in the process buffer for the current env.
 When the process has exited, apply the results to the environment in all
@@ -467,12 +476,7 @@ coresponding buffers."
   (setq envrc--direnv-status 'running)
   (envrc--direnv-broadcast-status)
   ;; First check whether direnv is enabled here
-  (pcase (let-alist (with-temp-buffer
-                      (let ((inhibit-read-only t))
-                        (when (zerop (process-file envrc-direnv-executable nil t nil "status" "--json"))
-                          (goto-char (point-min))
-                          (json-read-object))))
-           .state.foundRC.allowed)
+  (pcase (envrc--direnv-allowed-status-code)
     ((pred null)
      (setq envrc--direnv-status 'none
            envrc--direnv-result nil)
