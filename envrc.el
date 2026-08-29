@@ -366,6 +366,11 @@ also appear in PAIRS."
         (eshell-set-path (butlast exec-path))
       (kill-local-variable 'eshell-path-env))))
 
+(defun envrc--remote-p ()
+  "Returns non-nil if this is a tramp buffer."
+  (when-let* ((fn (or (buffer-file-name) default-directory)))
+    (file-remote-p fn)))
+
 (defun envrc--apply (buf result)
   "Update BUF with RESULT, which is a result of `envrc--direnv-export'."
   (with-current-buffer buf
@@ -375,21 +380,15 @@ also appear in PAIRS."
       (envrc--clear)
       (envrc--debug "applying %s" result)
       (if (listp result)
-          (let* ((remote (when-let* ((fn (or (buffer-file-name buf) default-directory)))
-                           (file-remote-p fn)))
-                 (env (envrc--merged-environment
-                       (default-value (if remote
-                                          'tramp-remote-process-environment
-                                        'process-environment))
-                       result))
+          (let* ((remote (envrc--remote-p))
+                 (process-env-var (if remote
+                                      'tramp-remote-process-environment
+                                    'process-environment))
+                 (env (envrc--merged-environment (default-value process-env-var) result))
                  (path (getenv-internal "PATH" env))
                  (parsed-path (parse-colon-path path)))
-            (if remote
-                (progn
-                  (setq-local tramp-remote-process-environment env)
-                  (envrc--debug "applied merged remote process environment"))
-              (setq-local process-environment env)
-              (envrc--debug "applied merged process environment"))
+            (set (make-local-variable process-env-var) env)
+            (envrc--debug "applied merged %s" process-env-var)
             ;; Get PATH from the merged environment: direnv may not have changed it
             (if remote
                 (setq-local envrc--remote-path parsed-path)
