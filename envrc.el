@@ -458,6 +458,20 @@ executed.")
     (when (string= default-directory (with-current-buffer buf envrc--env-dir))
       (envrc--direnv-apply-status-to buf))))
 
+(defun envrc--direnv-append-stderr (stderr exit-status)
+  "Append to the current buffer the string STDERR output.
+The text will be colourised according to the indicated process EXIT-STATUS."
+  (let ((inhibit-read-only t))
+    (goto-char (point-max))
+    (insert (propertize "\n--- Standard error ---\n" 'face 'font-lock-comment-face))
+    (let ((initial-pos (point)))
+      (insert stderr)
+      (goto-char (point-max))
+      (let (ansi-color-context)
+        (ansi-color-apply-on-region initial-pos (point)))
+      (add-face-text-property initial-pos (point)
+                              (if (zerop exit-status) 'success 'error)))))
+
 (defun envrc--direnv-export ()
   "Run direnv asynchronously in the process buffer for the current env.
 When the process has exited, apply the results to the environment in all
@@ -481,14 +495,14 @@ coresponding buffers."
     ((or 1 2)
      (envrc--direnv-set-status 'denied))
     (0
-     (let ((stdenv-buf (generate-new-buffer " *envrc-temp-" t)))
+     (let ((stderr-buf (generate-new-buffer " *envrc-temp-" t)))
        (kill-region (point-min) (point-max))
        ;; todo tramp? e.g. start-file-process
        (make-process
         :name "direnv"
         :buffer (current-buffer)
         :command (list envrc-direnv-executable "export" "json")
-        :stderr stdenv-buf
+        :stderr stderr-buf
         :sentinel (lambda (proc event)
                     (with-current-buffer (process-buffer proc)
                       (condition-case err
@@ -509,19 +523,9 @@ coresponding buffers."
                               (envrc--debug "direnv exited: %s" event)
                               (envrc--direnv-set-status 'error))
                             (unless (process-live-p proc)
-                              (setq envrc--direnv-exit-status (process-exit-status proc))
-                              ;; Append colourised stderr text if we're done
-                              (let ((stdenv (with-current-buffer stdenv-buf (buffer-string))))
-                                (kill-buffer stdenv-buf)
-                                (let ((inhibit-read-only t))
-                                  (insert (propertize "\n--- Standard error ---\n" 'face 'font-lock-comment-face))
-                                  (let ((initial-pos (point)))
-                                    (insert stdenv)
-                                    (goto-char (point-max))
-                                    (let (ansi-color-context)
-                                      (ansi-color-apply-on-region initial-pos (point)))
-                                    (add-face-text-property initial-pos (point)
-                                                            (if (eq envrc--direnv-status 'success) 'success 'error)))))))
+                              (let ((stderr (with-current-buffer stderr-buf (buffer-string))))
+                                (kill-buffer stderr-buf)
+                                (envrc--direnv-append-stderr stderr (process-exit-status proc)))))
                         (error
                          (envrc--debug "Sentinel died with error: %s" err)
                          (envrc--direnv-set-status 'error))))))))
