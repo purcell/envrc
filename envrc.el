@@ -420,7 +420,7 @@ also appear in PAIRS."
 
 (defun envrc--direnv-buffer-name (env-dir)
   "Return the name of the direnv buffer for ENV-DIR."
-  (format "*envrc-direnv - %s*" env-dir))
+  (format "*envrc-direnv - %s*" (abbreviate-file-name env-dir)))
 
 (defmacro envrc--with-direnv-buffer (&rest body)
   "Execute BODY in a buffer specific to the current env directory."
