@@ -470,19 +470,15 @@ executed.")
     (when (string= default-directory (with-current-buffer buf envrc--env-dir))
       (envrc--direnv-apply-status-to buf))))
 
-(defun envrc--direnv-append-stderr (stderr exit-status)
-  "Append to the current buffer the string STDERR output.
-The text will be colourised according to the indicated process EXIT-STATUS."
-  (let ((inhibit-read-only t))
-    (goto-char (point-max))
-    (insert (propertize "\n--- Standard error ---\n" 'face 'font-lock-comment-face))
-    (let ((initial-pos (point)))
-      (insert stderr)
-      (goto-char (point-max))
-      (let (ansi-color-context)
-        (ansi-color-apply-on-region initial-pos (point)))
-      (add-face-text-property initial-pos (point)
-                              (if (zerop exit-status) 'success 'error)))))
+(defun envrc--direnv-colourise-output (exit-status)
+  "Colourise the current buffer contents.
+The text will first have any ANSI colour applied, and then be colourised
+according to the indicated process EXIT-STATUS."
+  (let ((inhibit-read-only t)
+        ansi-color-context
+        (face (if (zerop exit-status) 'success 'error)))
+    (ansi-color-apply-on-region (point-min) (point-max))
+    (add-face-text-property (point-min) (point-max) face)))
 
 (defun envrc--direnv-export ()
   "Run direnv asynchronously in the process buffer for the current env.
@@ -506,37 +502,34 @@ coresponding buffers."
     ((or 1 2)
      (envrc--direnv-set-status 'denied))
     (0
-     (let ((stderr-buf (generate-new-buffer " *envrc-temp-" t)))
+     (let ((raw-json ""))
        (kill-region (point-min) (point-max))
        ;; todo tramp? e.g. start-file-process
        (make-process
         :name "direnv"
         :buffer (current-buffer)
         :command (list envrc-direnv-executable "export" "json")
-        :stderr stderr-buf
+        :stderr (current-buffer)
+        :filter (lambda (proc output) (setq raw-json (concat raw-json output)))
         :sentinel (lambda (proc event)
                     (with-current-buffer (process-buffer proc)
                       (condition-case err
                           (progn
                             (if (string-equal event "finished\n")
                                 (progn
-                                  (envrc--debug "direnv finished")
-                                  (save-excursion
-                                    (goto-char (point-min))
-                                    (setq envrc--direnv-result (unless (zerop (buffer-size))
-                                                                 (let ((json-key-type 'string))
-                                                                   (json-read-object))))
-                                    (envrc--direnv-set-status 'success)
-                                    ;; TODO: set env locally here too, to allow efficient direnv reload?
-                                    (when envrc-show-summary-in-minibuffer
-                                      (envrc--show-summary envrc--direnv-result default-directory))))
+                                  (envrc--debug "direnv finished with output: %s" raw-json)
+                                  (setq envrc--direnv-result (unless (string-empty-p raw-json)
+                                                               (let ((json-key-type 'string))
+                                                                 (json-read-from-string raw-json))))
+                                  (envrc--direnv-set-status 'success)
+                                  ;; TODO: set env locally here too, to allow efficient direnv reload?
+                                  (when envrc-show-summary-in-minibuffer
+                                    (envrc--show-summary envrc--direnv-result default-directory)))
                               ;; Process signalled or exited with failure
                               (envrc--debug "direnv exited: %s" event)
                               (envrc--direnv-set-status 'error))
                             (unless (process-live-p proc)
-                              (let ((stderr (with-current-buffer stderr-buf (buffer-string))))
-                                (kill-buffer stderr-buf)
-                                (envrc--direnv-append-stderr stderr (process-exit-status proc)))))
+                              (envrc--direnv-colourise-output (process-exit-status proc))))
                         (error
                          (envrc--debug "Sentinel died with error: %s" err)
                          (envrc--direnv-set-status 'error))))))))
