@@ -333,13 +333,17 @@ MSG and ARGS are as for that function."
                                        finally return (string-join strings " ")))
     "no changes"))
 
+(defun envrc--current-env-dir-message-string (directory)
+  "Colourised mention of current DIRECTORY to include in a `message' call."
+  (propertize (format "(%s)" (abbreviate-file-name (directory-file-name directory)))
+              'face 'font-lock-comment-face))
+
 (defun envrc--show-summary (result directory)
   "Summarise successful RESULT in the minibuffer.
 DIRECTORY is the directory in which the environment changes."
   (message "direnv: %s %s"
            (envrc--summarise-changes result)
-           (propertize (concat "(" (abbreviate-file-name (directory-file-name directory)) ")")
-                       'face 'font-lock-comment-face)))
+           (envrc--current-env-dir-message-string directory)))
 
 ;; Forward declarations for the byte compiler
 (defvar eshell-path-env)
@@ -467,7 +471,7 @@ executed.")
                          (`success 'success)
                          (`error 'error)
                          (`denied 'warning)))
-           (propertize (format "(%s)" (abbreviate-file-name default-directory)) 'face 'font-lock-comment-face))
+           (envrc--current-env-dir-message-string default-directory))
   (setq envrc--direnv-status status)
   (dolist (buf (envrc--mode-buffers))
     (when (string= default-directory (with-current-buffer buf envrc--env-dir))
