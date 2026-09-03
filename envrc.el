@@ -452,9 +452,9 @@ executed.")
 
 (defun envrc--direnv-allowed-status-code ()
   "Get direnv's numeric code for the status of the found environment, if any."
-  (when-let ((output (with-temp-buffer
-                       (when (zerop (process-file envrc-direnv-executable nil t nil "status" "--json"))
-                         (buffer-substring (point-min) (point-max))))))
+  (when-let* ((output (with-temp-buffer
+                        (when (zerop (process-file envrc-direnv-executable nil t nil "status" "--json"))
+                          (buffer-substring (point-min) (point-max))))))
     (condition-case _
         (let-alist (json-read-from-string output) .state.foundRC.allowed)
       (error
@@ -517,7 +517,7 @@ coresponding buffers."
         :buffer (current-buffer)
         :command (list envrc-direnv-executable "export" "json")
         :stderr (current-buffer)
-        :filter (lambda (proc output) (setq raw-json (concat raw-json output)))
+        :filter (lambda (_ output) (setq raw-json (concat raw-json output)))
         :sentinel (lambda (proc event)
                     (with-current-buffer (process-buffer proc)
                       (condition-case err
