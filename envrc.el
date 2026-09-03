@@ -448,12 +448,15 @@ executed.")
 
 (defun envrc--direnv-allowed-status-code ()
   "Get direnv's numeric code for the status of the found environment, if any."
-  (let-alist
-      (with-temp-buffer
-        (when (zerop (process-file envrc-direnv-executable nil t nil "status" "--json"))
-          (goto-char (point-min))
-          (json-read-object)))
-    .state.foundRC.allowed))
+  (when-let ((output (with-temp-buffer
+                       (when (zerop (process-file envrc-direnv-executable nil t nil "status" "--json"))
+                         (buffer-substring (point-min) (point-max))))))
+    (condition-case _
+        (let-alist (json-read-from-string output) .state.foundRC.allowed)
+      (error
+       (display-warning 'envrc (format "Version of %s is old, please upgrade" envrc-direnv-executable))
+       (cond ((string-search "Found RC allowed true\n" output) 0)
+             ((string-search "Found RC allowed false\n" output) 2))))))
 
 (defun envrc--direnv-set-status (status)
   "Save direnv STATUS locally and propagate it to relevant `envrc-mode' buffers."
