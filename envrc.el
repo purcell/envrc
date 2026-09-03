@@ -465,7 +465,7 @@ executed.")
 (defun envrc--direnv-set-status (status)
   "Save direnv STATUS locally and propagate it to relevant `envrc-mode' buffers."
   (message "%s %s"
-           (propertize (format "direnv %s" (symbol-name status))
+           (propertize (format "direnv: %s" (symbol-name status))
                        'face
                        (pcase status
                          (`success 'success)
