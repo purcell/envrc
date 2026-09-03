@@ -1,5 +1,5 @@
-[![Melpa Status](http://melpa.org/packages/envrc-badge.svg)](https://melpa.org/#/envrc)
-[![Melpa Stable Status](http://stable.melpa.org/packages/envrc-badge.svg)](http://stable.melpa.org/#/envrc)
+[![MELPA Status](http://melpa.org/packages/envrc-badge.svg)](https://melpa.org/#/envrc)
+[![MELPA Stable Status](http://stable.melpa.org/packages/envrc-badge.svg)](http://stable.melpa.org/#/envrc)
 [![Build Status](https://github.com/purcell/envrc/actions/workflows/test.yml/badge.svg)](https://github.com/purcell/envrc/actions/workflows/test.yml)
 <a href="https://www.patreon.com/sanityinc"><img alt="Support me" src="https://img.shields.io/badge/Support%20Me-%F0%9F%92%97-ff69b4.svg"></a>
 
