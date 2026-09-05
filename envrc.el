@@ -458,7 +458,7 @@ executed.")
     (condition-case _
         (let-alist (json-read-from-string output) .state.foundRC.allowed)
       (error
-       (display-warning 'envrc (format "Version of %s is old, please upgrade" envrc-direnv-executable))
+       ;; Old direnv that can't actually output status as JSON
        (cond ((string-search "Found RC allowed true\n" output) 0)
              ((string-search "Found RC allowed false\n" output) 2))))))
 
