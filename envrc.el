@@ -588,7 +588,11 @@ If FORCE is non-nil, then direnv will be run unconditionally."
              (envrc--debug "need to (re-)run direnv")
              (if (eq 'running envrc--direnv-status)
                  (envrc--debug "will wait for existing process")
-               (envrc--direnv-export))))
+               (let ((envrc-async t))
+                 ;; We force async for nested calls to ensure that no
+                 ;; side-effects that trigger envrc-mode will lead to
+                 ;; a blocking wait here, and a consequent deadlock.
+                 (envrc--direnv-export)))))
           (envrc--maybe-wait))
       (envrc--debug "no current env dir")
       (envrc--apply orig-buffer 'none))))
