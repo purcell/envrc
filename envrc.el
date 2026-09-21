@@ -510,7 +510,7 @@ coresponding buffers."
      (envrc--direnv-set-status 'denied))
     (0
      (let ((raw-json ""))
-       (kill-region (point-min) (point-max))
+       (delete-region (point-min) (point-max))
        ;; todo tramp? e.g. start-file-process
        (make-process
         :name "direnv"
