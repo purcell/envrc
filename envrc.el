@@ -1,4 +1,4 @@
-;;; envrc.el --- Support for `direnv' that operates buffer-locally  -*- lexical-binding: t; -*-
+;;; envrc.el --- Buffer-local `direnv' support with choice of sync/async  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2020-2026  Steve Purcell
 
