@@ -62,7 +62,6 @@
 
 (require 'seq)
 (require 'json)
-(require 'subr-x)
 (require 'ansi-color)
 (require 'cl-lib)
 (require 'diff-mode) ; for its faces
