@@ -211,7 +211,10 @@ it a prefix keybinding, e.g. (define-key envrc-mode-map (kbd \"C-c e\")
 (defface envrc-mode-line-error-face '((t :inherit error))
   "Face used in mode line to indicate that direnv failed.")
 
-(defface envrc-mode-line-none-face '((t :inherit warning))
+(defface envrc-mode-line-denied-face '((t :inherit warning))
+  "Face used in mode line to indicate that direnv refused to load the environment.")
+
+(defface envrc-mode-line-none-face '((t :inherit font-lock-comment-face))
   "Face used in mode line to indicate that direnv is not active.")
 
 (defface envrc-mode-line-running-face '((t))
@@ -245,7 +248,7 @@ To avoid repeated filesystem traversals, this is cached in each buffer.")
               (pcase envrc--status
                 (`on 'envrc-mode-line-on-face)
                 (`error 'envrc-mode-line-error-face)
-                (`denied 'envrc-mode-line-error-face)
+                (`denied 'envrc-mode-line-denied-face)
                 (`none 'envrc-mode-line-none-face)))
         ;; Cache this detail to avoid overhead in redisplay, e.g. when scrolling,
         ;; and don't display it at all for remote files
