@@ -312,7 +312,7 @@ To avoid confusion, `envrc-mode' is explicitly disabled in the buffer."
   "A version of `message' which does nothing if `envrc-debug' is nil.
 MSG and ARGS are as for that function."
   (when envrc-debug
-    (let ((text (format "[%s] %s" (current-buffer) (format msg args))))
+    (let ((text (format "[%s] %s" (current-buffer) (apply #'format msg args))))
       (envrc--at-end-of-special-buffer "*envrc-debug*"
         (insert text)
         (newline)))))
