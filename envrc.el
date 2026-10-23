@@ -608,16 +608,17 @@ If FORCE is non-nil, then direnv will be run unconditionally."
 
 (defun envrc--run-direnv (verb)
   "Run direnv command named by VERB, then refresh current env."
-  (envrc--with-required-current-env env-dir
-    (let* ((outbuf (get-buffer-create (format "*envrc-%s: %s*" verb env-dir)))
-           (default-directory env-dir)
-           (exit-code (process-file envrc-direnv-executable nil outbuf nil verb)))
-      (if (zerop exit-code)
-          (progn
-            (kill-buffer outbuf)
-            (envrc--get-current-env-or-run-direnv t))
-        (display-buffer outbuf)
-        (user-error "Error running direnv %s" verb)))))
+  (if-let* ((env-dir (envrc--find-env-dir)))
+      (let* ((outbuf (get-buffer-create (format "*envrc-%s: %s*" verb env-dir)))
+             (default-directory env-dir)
+             (exit-code (process-file envrc-direnv-executable nil outbuf nil verb)))
+        (if (zerop exit-code)
+            (progn
+              (kill-buffer outbuf)
+              (envrc--get-current-env-or-run-direnv t))
+          (display-buffer outbuf)
+          (user-error "Error running direnv %s" verb)))
+    (user-error "no current env dir")))
 
 
 ;;; Commands for end users

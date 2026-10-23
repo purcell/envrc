@@ -184,11 +184,35 @@
         (envrc-mode 1)
         (should (local-variable-p 'process-environment))
         (should (equal "BAR" (getenv "FOO")))
-        (envrc-reload)
+        (envrc-deny)
         (should (eq envrc--status 'denied)))
 
       (should (eq envrc--status 'denied))
       (should (not (local-variable-p 'process-environment))))))
+
+(ert-deftest envrc-can-allow-separately-then-reload ()
+  (envrc-tests--with-temp-directory _
+    (with-temp-buffer
+      (envrc-mode 1)
+
+      (should (eq envrc--status 'none))
+      (with-temp-file ".envrc"
+        (insert "export FOO=BAR"))
+      (envrc-tests--exec "allow")
+      (envrc-reload)
+      (should (eq envrc--status 'on)))))
+
+(ert-deftest envrc-can-allow-separately-then-allow ()
+  (envrc-tests--with-temp-directory _
+    (with-temp-buffer
+      (envrc-mode 1)
+
+      (should (eq envrc--status 'none))
+      (with-temp-file ".envrc"
+        (insert "export FOO=BAR"))
+      (envrc-tests--exec "allow")
+      (envrc-allow)
+      (should (eq envrc--status 'on)))))
 
 (ert-deftest envrc-remove-variable ()
   (envrc-tests--with-temp-directory _
