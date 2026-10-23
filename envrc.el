@@ -223,7 +223,7 @@ it a prefix keybinding, e.g. (define-key envrc-mode-map (kbd \"C-c e\")
 
 (defvar-local envrc--status 'none
   "Symbol indicating state of the current buffer's direnv.
-One of \\='(none on error).")
+One of \\='(none on denied error).")
 
 (defvar-local envrc--running nil
   "Whether direnv is known to be running for the current buffer's environment.")
