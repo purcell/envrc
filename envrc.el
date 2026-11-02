@@ -195,6 +195,7 @@ it a prefix keybinding, e.g. (define-key envrc-mode-map (kbd \"C-c e\")
          ((minibufferp) nil)
          ((string-prefix-p " *eldoc" (buffer-name)) nil)
          ((derived-mode-p 'envrc--special-mode) nil)
+         ((derived-mode-p 'backtrace-mode) nil)
          ((file-remote-p default-directory)
           (and envrc-remote
                (seq-contains-p
